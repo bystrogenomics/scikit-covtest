@@ -1,4 +1,4 @@
-import importlib.resources as pkg_resources
+from pathlib import Path
 import io
 
 import numpy as np
@@ -29,7 +29,7 @@ def load_mnist(
     data : dict
         With arrays for both train and test splits.
     """
-    data_path = pkg_resources.files(__package__).joinpath("data/mnist.npz")
+    data_path = Path(__file__).parent / "data/mnist.npz"
     with data_path.open("rb") as f:
         buffer = io.BytesIO(f.read())
     data = np.load(buffer, allow_pickle=False)
@@ -60,7 +60,7 @@ def load_mnist(
 
 
 def load_tcga(return_X_y: bool = True, return_names: bool = False):
-    data_path = pkg_resources.files(__package__).joinpath("data/tcga.npz")
+    data_path = Path(__file__).parent / "data/tcga.npz"
     with data_path.open("rb") as f:
         buffer = io.BytesIO(f.read())
     data = np.load(buffer, allow_pickle=True)
@@ -106,9 +106,7 @@ def load_iris(return_X_y: bool = True, return_names: bool = False):
         - (X, y, feature_names, target_names)
         - or a dict with all four arrays.
     """
-    data_path = pkg_resources.files(__package__).joinpath(
-        "data/iris_dataset.npz"
-    )
+    data_path = Path(__file__).parent / "data/iris_dataset.npz"
 
     with data_path.open("rb") as f:
         buffer = io.BytesIO(f.read())
