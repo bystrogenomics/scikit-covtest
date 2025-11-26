@@ -12,23 +12,33 @@ from .utils import validate_data_matrix
 
 
 def ahmad_2015_two_sample(X, Y):
-    """
-    Perform the Ahmad (2017) location-invariant test for homogeneity
-    of high-dimensional covariance matrices.
+    """Ahmad (2015) test for equality of covariance matrices.
+
+    Location-invariant test for homogeneity of high-dimensional
+    covariance matrices.
 
     Parameters
     ----------
-    X : np.ndarray, shape (n1, p)
-        First sample.
-    Y : np.ndarray, shape (n2, p)
-        Second sample.
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
 
     Returns
     -------
     result : dict
-        Dictionary containing:
-        - 'stat': test statistic
-        - 'p_value': p-value based on asymptotic normality
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic.
+        - 'p_value' : float
+            P-value based on asymptotic normality.
+
+    References
+    ----------
+    .. [1] Ahmad, M. R. (2017). "A location-invariant test for
+           homogeneity of covariance matrices." Journal of
+           Multivariate Analysis.
     """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)
@@ -322,9 +332,32 @@ def _schott_2001_two_sample_stat(matrix_list):
 
 
 def schott_2001(X, Y):
-    """
-    Schott (2001) homogeneity of covariance matrices test.
-    Uses asymptotic normal distribution under H0.
+    """Schott (2001) test for equality of covariance matrices.
+
+    Tests H0: Sigma_1 = Sigma_2 using asymptotic normal distribution.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Standardized test statistic.
+        - 'p_value' : float
+            Two-sided p-value.
+
+    References
+    ----------
+    .. [1] Schott, J. R. (2001). "Some tests for the equality of
+           covariance matrices." Journal of Statistical Planning
+           and Inference, 94(1), 25-36.
     """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)
@@ -434,6 +467,34 @@ def _srivastava_yanagihara_stat(x):
 
 
 def srivastava_yanagihara_two_sample(X, Y):
+    """Srivastava-Yanagihara test for covariance equality.
+
+    High-dimensional test for H0: Sigma_1 = Sigma_2.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
+
+    References
+    ----------
+    .. [1] Srivastava, M. S., & Yanagihara, H. (2010). "Testing
+           the equality of several covariance matrices with fewer
+           observations than the dimension." Journal of
+           Multivariate Analysis.
+    """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)
     matrix_ls = [X, Y]
@@ -528,6 +589,33 @@ def _srivastava_2007_stat(x):
 
 
 def srivastava_two_sample_2007(X, Y):
+    """Srivastava (2007) test for covariance equality.
+
+    High-dimensional test for H0: Sigma_1 = Sigma_2.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
+
+    References
+    ----------
+    .. [1] Srivastava, M. S. (2007). "Multivariate theory for
+           analyzing high dimensional data." Journal of the Japan
+           Statistical Society, 37(1), 53-86.
+    """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)
     matrix_ls = [X, Y]
@@ -619,6 +707,35 @@ def wald_two_sample(X, Y):
 
 
 def tyler_two_sample(X1, X2, unknown_mean=False):
+    """Tyler's M-estimator test for shape matrix equality.
+
+    Tests H0: Shape(Sigma_1) = Shape(Sigma_2) using Tyler's
+    M-estimator.
+
+    Parameters
+    ----------
+    X1 : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    X2 : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    unknown_mean : bool, default=False
+        If True, uses robust location estimation.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Standardized test statistic.
+        - 'p_value' : float
+            Right-tail p-value from standard normal distribution.
+
+    References
+    ----------
+    .. [1] Tyler, D. E. (1987). "A distribution-free M-estimator
+           of multivariate scatter." Annals of Statistics.
+    """
     X1 = validate_data_matrix(X1)
     X2 = validate_data_matrix(X2)
     n1, p = X1.shape

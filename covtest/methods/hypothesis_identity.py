@@ -28,6 +28,7 @@ Nagao, H. (1973).
 Annals of Statistics, 1(4), 700–709.
 https://doi.org/10.1214/aos/1176342506
 """
+
 import numpy as np
 import numpy.linalg as la
 import scipy.stats as stats  # type: ignore
@@ -62,9 +63,34 @@ def _ahmad_2015_stat(x: np.ndarray) -> float:
 
 
 def ahmad2015_identity(X, Sigma="identity"):
-    """
-    Ahmad & von Rosen (2015) test of covariance matrix structure,
-    when a data matrix X (n x p) is supplied.
+    """Ahmad & von Rosen (2015) test for identity covariance.
+
+    Tests the null hypothesis that the covariance matrix equals a
+    specified matrix (default: identity matrix).
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+    Sigma : {"identity", array-like}, default="identity"
+        The hypothesized covariance matrix. If "identity", tests
+        against the identity matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic value.
+        - 'p_value' : float
+            Two-sided p-value.
+
+    References
+    ----------
+    .. [1] Ahmad, M. R., & von Rosen, D. (2015). "Tests for
+           covariance matrices in high dimension with less sample
+           size." Journal of Multivariate Analysis, 130, 37-51.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -131,23 +157,32 @@ def _ledoit_wolf_stat(data):
 
 # Checked
 def ledoit_wolf_identity(X):
-    """Perform the Ledoit–Wolf test for identity covariance.
+    """Ledoit-Wolf test for identity covariance matrix.
+
+    Tests the null hypothesis H0: Sigma = I_p using the
+    Ledoit-Wolf statistic.
 
     Parameters
     ----------
     X : array-like of shape (n_samples, n_features)
-        The data matrix, where rows correspond to samples and
-        columns to variables.
+        Data matrix where rows are samples and columns are features.
 
     Returns
     -------
-    results : dict
-        Dictionary containing the following keys:
+    result : dict
+        Dictionary with keys:
 
-        - ``'stat'`` : float
-            The value of the test statistic.
-        - ``'p_value'`` : float
-            The p-value from the chi-square distribution.
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
+
+    References
+    ----------
+    .. [1] Ledoit, O., & Wolf, M. (2002). "Some hypothesis tests
+           for the covariance matrix when the dimension is large
+           compared to the sample size." Annals of Statistics,
+           30(4), 1081-1102.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -196,35 +231,34 @@ def _nagao_stat(data):
 
 # Checked
 def nagao_identity(X):
-    """Perform Nagao’s test for identity covariance.
+    """Nagao's test for identity covariance matrix.
+
+    Tests the null hypothesis H0: Sigma = I_p.
 
     Parameters
     ----------
     X : array-like of shape (n_samples, n_features)
-        The data matrix, where rows correspond to samples and columns to variables.
+        Data matrix where rows are samples and columns are features.
 
     Returns
     -------
-    results : dict
-        Dictionary containing the following keys:
+    result : dict
+        Dictionary with keys:
 
-        - ``'stat'`` : float
-            The value of the test statistic.
-        - ``'p_value'`` : float
-            The p-value from the chi-square distribution.
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
 
     Notes
     -----
-    The test statistic is defined as:
+    The test statistic is T = (np/2) * V, where V is Nagao's
+    statistic based on traces of the sample covariance matrix.
 
-    .. math::
-
-        T = \\frac{np}{2} V
-
-    where :math:`V` is Nagao’s test statistic.
-
-    The null hypothesis is :math:`\\Sigma = I_p`, where :math:`\\Sigma` is the covariance
-    matrix and :math:`I_p` is the identity matrix.
+    References
+    ----------
+    .. [1] Nagao, H. (1973). "On some test criteria for covariance
+           matrix." Annals of Statistics, 1(4), 700-709.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -238,6 +272,31 @@ def nagao_identity(X):
 
 # Checked
 def srivastava_2005_identity(X):
+    """Srivastava (2005) test for identity covariance matrix.
+
+    High-dimensional test for H0: Sigma = I_p.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic (asymptotically normal).
+        - 'p_value' : float
+            Right-tail p-value from standard normal distribution.
+
+    References
+    ----------
+    .. [1] Srivastava, M. S. (2005). "Some tests concerning the
+           covariance matrix in high dimensional data." Journal of
+           the Japan Statistical Society, 35(2), 251-272.
+    """
     X = validate_data_matrix(X)
     n = X.shape[0]
     S = np.cov(X.T)
@@ -249,11 +308,35 @@ def srivastava_2005_identity(X):
 
 
 def tyler_identity(X, unknown_mean=False, method="tr"):
-    """
-    Tests for Large-Dimensional Shape Matrices via Tyler’s M Estimators
+    """Tyler's M-estimator test for identity shape matrix.
 
-    One-sample test H0: Sigma = I_p.
-    If unknown_mean=True, uses robust location-adjusted version.
+    Tests H0: Sigma = I_p using Tyler's shape matrix estimator.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+    unknown_mean : bool, default=False
+        If True, uses robust location estimation before testing.
+    method : {'tr', 'log'}, default='tr'
+        Test statistic type: 'tr' for trace-based, 'log' for
+        log-determinant-based.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Standardized test statistic.
+        - 'p_value' : float
+            Right-tail p-value from standard normal distribution.
+
+    References
+    ----------
+    .. [1] Tyler, D. E. (1987). "A distribution-free M-estimator
+           of multivariate scatter." Annals of Statistics, 15(1),
+           234-251.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -309,13 +392,40 @@ def _fisher_2012_stat_(n, p, S_):
         + ((2 * (5 * n + 6)) / (n * (n**2 + n + 2)))
         * np.sum(np.diag(S_ @ S_))
         * (np.sum(np.diag(S_)) ** 2)
-        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2)))
-        * (np.sum(np.diag(S_)) ** 4)
+        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2))) * (np.sum(np.diag(S_)) ** 4)
     )
     return (n / np.sqrt(8 * (c**2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
 
 
 def fisher_single_sample(X, Sigma="identity"):
+    """Fisher's test for covariance matrix structure.
+
+    Tests the null hypothesis that the covariance matrix equals
+    a specified matrix.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+    Sigma : {"identity", array-like}, default="identity"
+        Hypothesized covariance matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic.
+        - 'p_value' : float
+            Two-sided p-value.
+
+    References
+    ----------
+    .. [1] Fisher, T. J., et al. (2012). "A high-dimensional test
+           for the equality of the smallest eigenvalues of a
+           covariance matrix." Journal of Multivariate Analysis.
+    """
     X = validate_data_matrix(X)
     p = X.shape[1]
     n = X.shape[0]
@@ -353,6 +463,34 @@ def _srivastava2011_(n, p, S_):
 
 
 def srivastava2011_single_sample(X, Sigma="identity"):
+    """Srivastava (2011) test for covariance matrix structure.
+
+    High-dimensional test for covariance matrix equality.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+    Sigma : {"identity", array-like}, default="identity"
+        Hypothesized covariance matrix.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic.
+        - 'p_value' : float
+            Two-sided p-value.
+
+    References
+    ----------
+    .. [1] Srivastava, M. S., & Yanagihara, H. (2011). "Testing
+           the equality of several covariance matrices with fewer
+           observations than the dimension." Journal of
+           Multivariate Analysis.
+    """
     X = validate_data_matrix(X)
     p = X.shape[1]
     n = X.shape[0]
