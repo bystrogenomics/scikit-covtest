@@ -26,7 +26,7 @@ def flury_proportionality_test(
     max_iter: int = 1000,
     tol: float = 1e-9,
     ridge: float = 0.0,
-    init_c: np.ndarray | None = None,
+    init_c: Optional[np.ndarray] = None,
 ):
     """
     Convenience wrapper that accepts raw group data matrices.

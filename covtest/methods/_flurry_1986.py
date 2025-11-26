@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Optional
 from numpy.linalg import eigh
 from scipy.stats import chi2
 
@@ -28,7 +29,7 @@ def flury_pcm(
     *,
     max_iter: int = 1000,
     tol: float = 1e-9,
-    init_c: np.ndarray | None = None,
+    init_c: Optional[np.ndarray] = None,
     ridge: float = 0.0,
     return_history: bool = False,
 ):
@@ -177,7 +178,7 @@ def flury_proportionality_test_from_cov(
     max_iter: int = 1000,
     tol: float = 1e-9,
     ridge: float = 0.0,
-    init_c: np.ndarray | None = None,
+    init_c: Optional[np.ndarray] = None,
 ):
     """
     Likelihood-ratio test for proportional covariance matrices using
@@ -241,7 +242,7 @@ def flury_proportionality_test(
     max_iter: int = 1000,
     tol: float = 1e-9,
     ridge: float = 0.0,
-    init_c: np.ndarray | None = None,
+    init_c: Optional[np.ndarray] = None,
 ):
     """
     Convenience wrapper that accepts raw group data matrices.
