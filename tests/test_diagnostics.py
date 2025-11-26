@@ -4,7 +4,7 @@ import pytest
 
 import covtest.diagnostics.assumptions as diag
 from covtest.datasets.loader import load_iris
-from covtest.diagnostic.assumptions import hz_test, mardia_tests, royston_test
+from covtest.diagnostics.assumptions import hz_test, mardia_tests, royston_test
 
 
 @pytest.fixture
