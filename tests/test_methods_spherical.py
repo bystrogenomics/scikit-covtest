@@ -101,7 +101,6 @@ def test_non_spherical_data_gives_signal(non_spherical_data):
     sk_res = sk_test(non_spherical_data)
     hl_res1 = hallin_rank_sphericity_test(non_spherical_data, method="wilcoxon")
     hl_res2 = hallin_rank_sphericity_test(non_spherical_data, method="vdw")
-    bartlett_res = bartlett_sphericity_test(non_spherical_data)
     sk_res = sk_test(non_spherical_data)
     czz_res = czz_sphericity_test(non_spherical_data)
     # Expect evidence against null, so p-value should not be 1
