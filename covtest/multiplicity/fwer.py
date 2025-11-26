@@ -43,6 +43,7 @@ Examples
 >>> res["rejected"]
 array([ True,  True, False])
 """
+
 __all__ = ["bonferroni", "holm", "hochberg", "hommel", "romano_wolf_maxT"]
 
 
@@ -52,7 +53,69 @@ import numpy as np
 
 
 def bonferroni(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
-    """Bonferroni correction for FWER control."""
+    """
+    Apply Bonferroni correction for FWER control.
+
+    The Bonferroni correction is the simplest and most conservative method
+    for controlling the family-wise error rate. It adjusts p-values by
+    multiplying them by the number of tests, ensuring strong FWER control
+    under any dependence structure.
+
+    Parameters
+    ----------
+    pvals : array-like of shape (n_tests,)
+        Raw p-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired family-wise error rate level. Must be between 0 and 1.
+
+    Returns
+    -------
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'pvals_adj' : ndarray of shape (n_tests,)
+            Bonferroni-adjusted p-values, computed as min(1, p * m) where
+            m is the number of tests.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FWER level used for the correction.
+
+        - 'method' : str
+            Always 'Bonferroni' to indicate the procedure used.
+
+    Notes
+    -----
+    The Bonferroni correction controls FWER at level alpha by rejecting
+    hypothesis i if p_i <= alpha/m, where m is the total number of tests.
+
+    This is equivalent to comparing adjusted p-values p_adj_i = m * p_i
+    against alpha.
+
+    While very conservative, the Bonferroni correction is simple, widely
+    used, and provides strong FWER control under any dependence structure.
+
+    References
+    ----------
+    .. [1] Bonferroni, C. E. (1936). Teoria statistica delle classi e
+           calcolo delle probabilità. Pubblicazioni del R Istituto Superiore
+           di Scienze Economiche e Commerciali di Firenze, 8, 3-62.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.01, 0.03, 0.2])
+    >>> results = bonferroni(pvals, alpha=0.05)
+    >>> results['pvals_adj']
+    array([0.03, 0.09, 0.6 ])
+    >>> results['rejected']
+    array([ True, False, False])
+    """
     p = np.asarray(pvals, dtype=float)
     m = p.size
     p_adj = np.minimum(1.0, p * m)
@@ -66,7 +129,71 @@ def bonferroni(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
 
 def holm(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
-    """Holm–Bonferroni step-down procedure for FWER control."""
+    """
+    Apply Holm-Bonferroni step-down procedure for FWER control.
+
+    The Holm-Bonferroni procedure is a sequentially rejective step-down
+    method that is uniformly more powerful than the Bonferroni correction
+    while maintaining strong FWER control. It tests hypotheses in order
+    of increasing p-values.
+
+    Parameters
+    ----------
+    pvals : array-like of shape (n_tests,)
+        Raw p-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired family-wise error rate level. Must be between 0 and 1.
+
+    Returns
+    -------
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'pvals_adj' : ndarray of shape (n_tests,)
+            Holm-adjusted p-values. For the i-th smallest p-value,
+            p_adj_i = (m - i + 1) * p_i, enforcing monotonicity.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FWER level used for the correction.
+
+        - 'method' : str
+            Always 'Holm' to indicate the procedure used.
+
+    Notes
+    -----
+    The Holm procedure works as follows:
+
+    1. Sort p-values in ascending order: p_(1) <= p_(2) <= ... <= p_(m)
+    2. Find the smallest k such that p_(k) > alpha/(m - k + 1)
+    3. Reject hypotheses 1, ..., k-1
+
+    The adjusted p-values are computed as p_adj_(i) = (m - i + 1) * p_(i),
+    with monotonicity enforced so that p_adj_(i) <= p_adj_(i+1).
+
+    This method is uniformly more powerful than Bonferroni while maintaining
+    the same FWER guarantee under any dependence structure.
+
+    References
+    ----------
+    .. [1] Holm, S. (1979). A simple sequentially rejective multiple test
+           procedure. Scandinavian Journal of Statistics, 6(2), 65-70.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.001, 0.01, 0.2, 0.5])
+    >>> results = holm(pvals, alpha=0.05)
+    >>> results['pvals_adj']
+    array([0.004, 0.03 , 0.4  , 0.5  ])
+    >>> results['rejected']
+    array([ True,  True, False, False])
+    """
     p = np.asarray(pvals, dtype=float)
     m = p.size
     order = np.argsort(p)
@@ -91,7 +218,72 @@ def holm(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
 
 def hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
-    """Hochberg step-up procedure for FWER control."""
+    """
+    Apply Hochberg step-up procedure for FWER control.
+
+    The Hochberg procedure is a step-up method that is more powerful than
+    the Holm procedure under certain conditions. It requires an assumption
+    of non-negative dependence among test statistics but provides increased
+    power when this assumption holds.
+
+    Parameters
+    ----------
+    pvals : array-like of shape (n_tests,)
+        Raw p-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired family-wise error rate level. Must be between 0 and 1.
+
+    Returns
+    -------
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'pvals_adj' : ndarray of shape (n_tests,)
+            Hochberg-adjusted p-values. For the i-th smallest p-value,
+            p_adj_i = (m - i + 1) * p_i, with reverse monotonicity enforced.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FWER level used for the correction.
+
+        - 'method' : str
+            Always 'Hochberg' to indicate the procedure used.
+
+    Notes
+    -----
+    The Hochberg procedure works as follows:
+
+    1. Sort p-values in ascending order: p_(1) <= p_(2) <= ... <= p_(m)
+    2. Find the largest k such that p_(k) <= alpha/(m - k + 1)
+    3. Reject hypotheses 1, ..., k
+
+    Unlike Holm (step-down), Hochberg uses a step-up approach, starting
+    from the largest p-value and working backwards.
+
+    The procedure controls FWER under independence or positive dependence
+    (PRDS) among test statistics. It is more powerful than Holm when these
+    conditions are met.
+
+    References
+    ----------
+    .. [1] Hochberg, Y. (1988). A sharper Bonferroni procedure for multiple
+           tests of significance. Biometrika, 75(4), 800-802.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.001, 0.01, 0.2, 0.5])
+    >>> results = hochberg(pvals, alpha=0.05)
+    >>> results['pvals_adj']
+    array([0.004, 0.03 , 0.4  , 0.5  ])
+    >>> results['rejected']
+    array([ True,  True, False, False])
+    """
     p = np.asarray(pvals, dtype=float)
     m = p.size
     order = np.argsort(p)  # sort ascending
@@ -118,7 +310,67 @@ def hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
 
 def hommel(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
-    """Hommel’s procedure for FWER control (exact, but less powerful for large m)."""
+    """
+    Apply Hommel's procedure for FWER control.
+
+    Hommel's procedure is an exact method that is uniformly more powerful
+    than Holm's procedure while still controlling FWER under arbitrary
+    dependence. However, it is computationally more intensive for large
+    numbers of tests.
+
+    Parameters
+    ----------
+    pvals : array-like of shape (n_tests,)
+        Raw p-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired family-wise error rate level. Must be between 0 and 1.
+
+    Returns
+    -------
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'pvals_adj' : ndarray of shape (n_tests,)
+            Hommel-adjusted p-values.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FWER level used for the correction.
+
+        - 'method' : str
+            Always 'Hommel' to indicate the procedure used.
+
+    Notes
+    -----
+    Hommel's procedure is based on a modified Bonferroni test that considers
+    all possible subsets of hypotheses. The algorithm iterates through
+    different subset sizes to compute adjusted p-values.
+
+    While more powerful than Holm, the computational complexity increases
+    with the number of tests, making it less practical for very large m.
+
+    The procedure provides strong FWER control under any dependence structure.
+
+    References
+    ----------
+    .. [1] Hommel, G. (1988). A stagewise rejective multiple test procedure
+           based on a modified Bonferroni test. Biometrika, 75(2), 383-386.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.001, 0.01, 0.2, 0.5])
+    >>> results = hommel(pvals, alpha=0.05)
+    >>> results['pvals_adj']
+    array([0.004, 0.03 , 0.4  , 0.5  ])
+    >>> results['rejected']
+    array([ True,  True, False, False])
+    """
     p = np.asarray(pvals, dtype=float)
     m = p.size
     order = np.argsort(p)
@@ -147,27 +399,100 @@ def romano_wolf_maxT(
     side: Literal["right", "left", "two-sided"] = "right",
 ) -> Dict:
     """
-    Romano–Wolf step-down max-T adjusted p-values for FWER control.
+    Apply Romano-Wolf step-down max-T procedure for FWER control.
+
+    The Romano-Wolf procedure uses bootstrap or permutation resampling to
+    compute adjusted p-values that account for the joint distribution of
+    test statistics. It provides strong FWER control under arbitrary
+    dependence and is particularly powerful for correlated tests.
 
     Parameters
     ----------
     T_obs : array-like of shape (m,)
-        Observed test statistics (large = more evidence if side="right").
+        Observed test statistics. For side="right", larger values indicate
+        stronger evidence against the null hypothesis.
+
     T_boot : array-like of shape (B, m)
-        Bootstrap/permutation test statistics under the joint null.
-        Each row corresponds to one resample, columns to hypotheses.
+        Bootstrap or permutation test statistics under the joint null
+        hypothesis. Each row corresponds to one resample, and columns
+        correspond to the m hypotheses.
+
     alpha : float, default=0.05
-        Target FWER level.
+        The desired family-wise error rate level. Must be between 0 and 1.
+
     side : {"right", "left", "two-sided"}, default="right"
-        Alternative direction.
+        Direction of the alternative hypothesis:
+
+        - 'right' : Test statistic is large under the alternative
+        - 'left' : Test statistic is small under the alternative
+        - 'two-sided' : Test statistic is extreme (large or small) under the alternative
 
     Returns
     -------
     results : dict
-        - 'pvals_adj': adjusted p-values
-        - 'rejected': boolean array of rejections at level alpha
-        - 'alpha': significance level
-        - 'method': string identifier
+        Dictionary containing the following keys:
+
+        - 'pvals_adj' : ndarray of shape (m,)
+            Romano-Wolf adjusted p-values accounting for the joint
+            distribution of test statistics.
+
+        - 'rejected' : ndarray of shape (m,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FWER level used for the correction.
+
+        - 'method' : str
+            Always 'Romano–Wolf' to indicate the procedure used.
+
+    Raises
+    ------
+    ValueError
+        If T_obs and T_boot have incompatible shapes (different number of
+        hypotheses m).
+
+    Notes
+    -----
+    The Romano-Wolf procedure works as follows:
+
+    1. Order test statistics from strongest to weakest evidence
+    2. For each hypothesis k in this order:
+       - Compute max statistic over remaining hypotheses in each bootstrap sample
+       - Calculate p-value as proportion of bootstrap max statistics >= observed statistic
+       - Enforce monotonicity: p_adj_k >= p_adj_(k-1)
+
+    This step-down approach accounts for the dependence structure by using
+    the joint distribution of test statistics under the null hypothesis.
+
+    The method requires user-supplied bootstrap or permutation samples
+    (T_boot) generated under the joint null hypothesis. The quality of
+    FWER control depends on the validity of these resamples.
+
+    References
+    ----------
+    .. [1] Romano, J. P., & Wolf, M. (2005). Exact and approximate stepdown
+           methods for multiple hypothesis testing. Journal of the American
+           Statistical Association, 100(469), 94-108.
+
+    .. [2] Romano, J. P., & Wolf, M. (2016). Efficient computation of
+           adjusted p-values for resampling-based stepdown multiple testing.
+           Statistics & Probability Letters, 113, 38-40.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> T_obs = np.array([2.5, 1.8, 3.2])
+    >>> T_boot = np.random.standard_normal((200, 3))
+    >>> results = romano_wolf_maxT(T_obs, T_boot, alpha=0.05)
+    >>> results['rejected']
+    array([ True, False,  True])
+
+    >>> # Two-sided test
+    >>> results_two = romano_wolf_maxT(T_obs, T_boot, alpha=0.05, side="two-sided")
+    >>> results_two['method']
+    'Romano–Wolf'
     """
     T_obs = np.asarray(T_obs, dtype=float)
     T_boot = np.asarray(T_boot, dtype=float)
