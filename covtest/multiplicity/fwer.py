@@ -1,38 +1,66 @@
-"""
-Family-Wise Error Rate (FWER) control procedures.
+"""Family-wise error rate (FWER) multiple testing corrections.
 
-This module implements classical and modern procedures for controlling
-the family-wise error rate, i.e. the probability of making one or more
-false rejections when testing multiple hypotheses.
+This module implements procedures that control the family-wise error rate
+(FWER), defined as the probability of making at least one false rejection
+when testing multiple hypotheses.
 
-Implemented methods
--------------------
-- Bonferroni (1936)
-- Holm–Bonferroni step-down (1979)
-- Hochberg step-up (1988)
-- Hommel exact procedure (1988)
-- Romano–Wolf step-down max-T (2005) with bootstrap/permutation resampling
+Functions
+---------
+bonferroni
+    Classical Bonferroni correction that adjusts p-values by the number
+    of tests, providing strong FWER control under any dependence structure.
 
-References
-----------
-.. [1] Bonferroni, C. E. (1936). "Teoria statistica delle classi e calcolo delle probabilità".
-       Pubblicazioni del R Istituto Superiore di Scienze Economiche e Commerciali di Firenze.
-.. [2] Holm, S. (1979). "A simple sequentially rejective multiple test procedure".
-       Scandinavian Journal of Statistics, 6(2), 65–70.
-.. [3] Hochberg, Y. (1988). "A sharper Bonferroni procedure for multiple tests of significance".
-       Biometrika, 75(4), 800–802.
-.. [4] Hommel, G. (1988). "A stagewise rejective multiple test procedure 
-         based on a modified Bonferroni test".
-       Biometrika, 75(2), 383–386.
-.. [5] Romano, J. P., & Wolf, M. (2005). "Exact and approximate stepdown 
-       methods for multiple hypothesis testing".
-       Journal of the American Statistical Association, 100(469), 94–108.
+holm
+    Holm-Bonferroni sequentially rejective step-down procedure, uniformly
+    more powerful than Bonferroni while maintaining strong FWER control.
+
+hochberg
+    Hochberg step-up procedure, more powerful than Holm under independence
+    or positive dependence (PRDS) among test statistics.
+
+hommel
+    Hommel exact procedure, uniformly more powerful than Holm while
+    controlling FWER under arbitrary dependence; more computationally
+    intensive for large numbers of tests.
+
+romano_wolf_maxT
+    Romano-Wolf step-down max-T procedure using bootstrap or permutation
+    resampling of test statistics under the joint null hypothesis.
 
 Notes
 -----
-The Romano–Wolf procedure requires user-supplied bootstrap or permutation
-test statistics under the joint null hypothesis. It provides strong control
-of FWER under arbitrary dependence.
+FWER-controlling procedures are typically more conservative than FDR-based
+procedures, but they provide strong control of the probability of making
+any false rejection, which can be desirable in high-stakes applications.
+
+The Romano-Wolf procedure requires user-supplied bootstrap or permutation
+samples that approximate the joint null distribution of the test statistics.
+
+See Also
+--------
+covtest.multiplicity.fdr
+    False discovery rate (FDR) control procedures.
+
+References
+----------
+.. [1] Bonferroni, C. E. (1936).
+       "Teoria statistica delle classi e calcolo delle probabilita."
+       Pubblicazioni del R Istituto Superiore di Scienze Economiche e
+       Commerciali di Firenze.
+.. [2] Holm, S. (1979).
+       "A simple sequentially rejective multiple test procedure."
+       Scandinavian Journal of Statistics, 6(2), 65-70.
+.. [3] Hochberg, Y. (1988).
+       "A sharper Bonferroni procedure for multiple tests of significance."
+       Biometrika, 75(4), 800-802.
+.. [4] Hommel, G. (1988).
+       "A stagewise rejective multiple test procedure based on a modified
+       Bonferroni test."
+       Biometrika, 75(2), 383-386.
+.. [5] Romano, J. P., and Wolf, M. (2005).
+       "Exact and approximate stepdown methods for multiple hypothesis
+       testing."
+       Journal of the American Statistical Association, 100(469), 94-108.
 
 Examples
 --------
@@ -43,9 +71,6 @@ Examples
 >>> res["rejected"]
 array([ True,  True, False])
 """
-
-__all__ = ["bonferroni", "holm", "hochberg", "hommel", "romano_wolf_maxT"]
-
 
 from typing import Dict, Literal
 
