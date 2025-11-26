@@ -3,6 +3,7 @@ import scipy.stats as stats  # type: ignore
 
 from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
+from .utils import validate_data_matrix
 
 
 def bartlett_sphericity_test(X):
@@ -23,7 +24,7 @@ def bartlett_sphericity_test(X):
     p_value : float
         p-value for the test.
     """
-
+    X = validate_data_matrix(X)
     n, p = X.shape
 
     # Compute correlation matrix
@@ -82,12 +83,12 @@ def _john_stat(data):
 
 
 # Checked
-def john_sphericity(data):
+def john_sphericity(X):
     """Perform John's sphericity hypothesis test.
 
     Parameters
     ----------
-    data : array-like of shape (n_samples, n_features)
+    X : array-like of shape (n_samples, n_features)
         The data matrix, where rows correspond to samples and columns
         to variables.
 
@@ -123,8 +124,9 @@ def john_sphericity(data):
     Biometrika, 58(1), 123–127.
     https://doi.org/10.1093/biomet/58.1.123
     """
-    n, p = data.shape
-    U = _john_stat(data)
+    X = validate_data_matrix(X)
+    n, p = X.shape
+    U = _john_stat(X)
     degree_of_freedom = p * (p + 1) / 2 - 1
     stat = U * n * p / 2
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
@@ -134,6 +136,7 @@ def john_sphericity(data):
 
 # Checked
 def srivastava_2005_sphericity(X):
+    X = validate_data_matrix(X)
     n = X.shape[0]
     S = np.cov(X.T)
     T_1 = s2005.T_1_stat(S, n)
@@ -172,7 +175,7 @@ def sk_test(X):
     Returns:
         dict(statistic=Q, z=z, p_value=p)
     """
-    X = np.asarray(X)
+    X = validate_data_matrix(X)
     n, p = X.shape
     if n < 4:
         raise ValueError("Need n >= 4 for the leave-one-out estimator.")
@@ -263,7 +266,7 @@ def muirhead_sphericity_lrt(
         raise ValueError("If S is provided, also provide n (sample size).")
 
     if X is not None:
-        X = np.asarray(X, dtype=float)
+        X = validate_data_matrix(X)
         if X.ndim != 2:
             raise ValueError("X must be 2D.")
         n, p = X.shape
@@ -354,7 +357,7 @@ def czz_sphericity_test(X, center=False):
         sum_{i,j,k all distinct} <X_i,X_j><X_i,X_k> = sum_R2 - sumsq_off
         sum_{i,j,k,l all distinct} <X_i,X_j><X_k,X_l> = s_off^2 - 4*sum_R2 + 2*sumsq_off
     """
-    X = np.asarray(X, dtype=float)
+    X = validate_data_matrix(X)
     if X.ndim != 2:
         raise ValueError("X must be a 2D array (n, p).")
     n, p = X.shape
@@ -404,6 +407,7 @@ def hallin_rank_sphericity_test(X, method="wilcoxon"):
     """
     Van der Waerden (normal-score) rank-based test for sphericity.
     """
+    X = validate_data_matrix(X)
     if method == "wilcoxon":
         n, k = X.shape
         U, d = hallin2006._center_and_scale(X)
