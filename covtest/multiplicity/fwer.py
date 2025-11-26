@@ -43,21 +43,21 @@ covtest.multiplicity.fdr
 
 References
 ----------
-.. [1] Bonferroni, C. E. (1936).
+- [1] Bonferroni, C. E. (1936).
        "Teoria statistica delle classi e calcolo delle probabilita."
        Pubblicazioni del R Istituto Superiore di Scienze Economiche e
        Commerciali di Firenze.
-.. [2] Holm, S. (1979).
+- [2] Holm, S. (1979).
        "A simple sequentially rejective multiple test procedure."
        Scandinavian Journal of Statistics, 6(2), 65-70.
-.. [3] Hochberg, Y. (1988).
+- [3] Hochberg, Y. (1988).
        "A sharper Bonferroni procedure for multiple tests of significance."
        Biometrika, 75(4), 800-802.
-.. [4] Hommel, G. (1988).
+- [4] Hommel, G. (1988).
        "A stagewise rejective multiple test procedure based on a modified
        Bonferroni test."
        Biometrika, 75(2), 383-386.
-.. [5] Romano, J. P., and Wolf, M. (2005).
+- [5] Romano, J. P., and Wolf, M. (2005).
        "Exact and approximate stepdown methods for multiple hypothesis
        testing."
        Journal of the American Statistical Association, 100(469), 94-108.
@@ -127,7 +127,7 @@ def bonferroni(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Bonferroni, C. E. (1936). Teoria statistica delle classi e
+    - [1] Bonferroni, C. E. (1936). Teoria statistica delle classi e
            calcolo delle probabilità. Pubblicazioni del R Istituto Superiore
            di Scienze Economiche e Commerciali di Firenze, 8, 3-62.
 
@@ -194,9 +194,9 @@ def holm(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
     -----
     The Holm procedure works as follows:
 
-    1. Sort p-values in ascending order: p_(1) <= p_(2) <= ... <= p_(m)
+    1. Sort p-values in ascending order: p_(1) <= p_(2) <= -. <= p_(m)
     2. Find the smallest k such that p_(k) > alpha/(m - k + 1)
-    3. Reject hypotheses 1, ..., k-1
+    3. Reject hypotheses 1, -., k-1
 
     The adjusted p-values are computed as p_adj_(i) = (m - i + 1) * p_(i),
     with monotonicity enforced so that p_adj_(i) <= p_adj_(i+1).
@@ -206,7 +206,7 @@ def holm(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Holm, S. (1979). A simple sequentially rejective multiple test
+    - [1] Holm, S. (1979). A simple sequentially rejective multiple test
            procedure. Scandinavian Journal of Statistics, 6(2), 65-70.
 
     Examples
@@ -283,9 +283,9 @@ def hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
     -----
     The Hochberg procedure works as follows:
 
-    1. Sort p-values in ascending order: p_(1) <= p_(2) <= ... <= p_(m)
+    1. Sort p-values in ascending order: p_(1) <= p_(2) <= -. <= p_(m)
     2. Find the largest k such that p_(k) <= alpha/(m - k + 1)
-    3. Reject hypotheses 1, ..., k
+    3. Reject hypotheses 1, -., k
 
     Unlike Holm (step-down), Hochberg uses a step-up approach, starting
     from the largest p-value and working backwards.
@@ -296,7 +296,7 @@ def hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Hochberg, Y. (1988). A sharper Bonferroni procedure for multiple
+    - [1] Hochberg, Y. (1988). A sharper Bonferroni procedure for multiple
            tests of significance. Biometrika, 75(4), 800-802.
 
     Examples
@@ -314,7 +314,7 @@ def hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
     order = np.argsort(p)  # sort ascending
     p_sorted = p[order]
 
-    # Raw adjusted (before monotonicity): (m - i) * p_(i), i = 0..m-1
+    # Raw adjusted (before monotonicity): (m - i) * p_(i), i = 0-m-1
     adj_sorted = p_sorted * (m - np.arange(m))
     adj_sorted = np.minimum(adj_sorted, 1.0)
 
@@ -383,7 +383,7 @@ def hommel(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Hommel, G. (1988). A stagewise rejective multiple test procedure
+    - [1] Hommel, G. (1988). A stagewise rejective multiple test procedure
            based on a modified Bonferroni test. Biometrika, 75(2), 383-386.
 
     Examples
@@ -496,11 +496,11 @@ def romano_wolf_maxT(
 
     References
     ----------
-    .. [1] Romano, J. P., & Wolf, M. (2005). Exact and approximate stepdown
+    - [1] Romano, J. P., & Wolf, M. (2005). Exact and approximate stepdown
            methods for multiple hypothesis testing. Journal of the American
            Statistical Association, 100(469), 94-108.
 
-    .. [2] Romano, J. P., & Wolf, M. (2016). Efficient computation of
+    - [2] Romano, J. P., & Wolf, M. (2016). Efficient computation of
            adjusted p-values for resampling-based stepdown multiple testing.
            Statistics & Probability Letters, 113, 38-40.
 
