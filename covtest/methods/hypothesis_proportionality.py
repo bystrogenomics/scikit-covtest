@@ -29,17 +29,35 @@ def flury_proportionality_test(
     ridge: float = 0.0,
     init_c: Optional[np.ndarray] = None,
 ):
-    """
-    Convenience wrapper that accepts raw group data matrices.
+    """Flury's test for proportional covariance matrices.
+
+    Tests H0: Sigma_1 = c_1 * Sigma, Sigma_2 = c_2 * Sigma for
+    some common Sigma and constants c_1, c_2 > 0.
 
     Parameters
     ----------
-    X_list : list of arrays
-        Each X_i has shape (n_i, p). This function computes S_i = scatter / n_i.
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    max_iter : int, default=1000
+        Maximum iterations for MLE convergence.
+    tol : float, default=1e-9
+        Convergence tolerance.
+    ridge : float, default=0.0
+        Ridge regularization parameter.
+    init_c : array-like, optional
+        Initial values for proportionality constants.
+
     Returns
     -------
-    out : dict
-        See flury_proportionality_test_from_cov.
+    result : dict
+        Test results including statistic and p-value.
+
+    References
+    ----------
+    .. [1] Flury, B. K. (1986). "Proportionality of k covariance
+           matrices." Statistics & Probability Letters, 4(1), 29-33.
     """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)

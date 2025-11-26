@@ -7,22 +7,31 @@ from .utils import validate_data_matrix
 
 
 def bartlett_sphericity_test(X):
-    """
-    Bartlett's test of sphericity.
+    """Bartlett's test of sphericity.
 
-    Tests the null hypothesis that the correlation matrix of the population is the identity matrix.
+    Tests the null hypothesis that the correlation matrix equals
+    the identity matrix.
 
     Parameters
     ----------
-    X : ndarray of shape (n_samples, n_features)
-        The data matrix (observations in rows, variables in columns).
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
 
     Returns
     -------
-    stat : float
-        Test statistic (approximately chi-squared distributed).
-    p_value : float
-        p-value for the test.
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value for the test.
+
+    References
+    ----------
+    .. [1] Bartlett, M. S. (1954). "A note on the multiplying
+           factors for various chi-square approximations." Journal
+           of the Royal Statistical Society, Series B, 16, 296-298.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -84,45 +93,35 @@ def _john_stat(data):
 
 # Checked
 def john_sphericity(X):
-    """Perform John's sphericity hypothesis test.
+    """John's test for sphericity.
+
+    Tests the null hypothesis that the covariance matrix is
+    proportional to the identity matrix (sphericity).
 
     Parameters
     ----------
     X : array-like of shape (n_samples, n_features)
-        The data matrix, where rows correspond to samples and columns
-        to variables.
+        Data matrix where rows are samples and columns are features.
 
     Returns
     -------
-    results : dict
-        Dictionary containing the following keys:
+    result : dict
+        Dictionary with keys:
 
-        - ``'stat'`` : float
-            The value of the test statistic.
-        - ``'p_value'`` : float
-            The p-value from the chi-square distribution.
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
 
     Notes
     -----
-    The test statistic is defined as:
-
-    .. math::
-
-        T = U \\cdot \\frac{np}{2}
-
-    where :math:`U` is John’s test statistic, :math:`n` is the number
-    of samples, and :math:`p` is the number of features.
-
-    The null hypothesis is that the covariance matrix is proportional
-    to the identity matrix (sphericity). The alternative is that
-    the covariance structure departs from sphericity.
+    The test statistic is T = U * (np/2), where U is John's
+    statistic based on the ratio of trace(S^2) to trace(S)^2.
 
     References
     ----------
-    John, S. (1971).
-    "Some optimal multivariate tests."
-    Biometrika, 58(1), 123–127.
-    https://doi.org/10.1093/biomet/58.1.123
+    .. [1] John, S. (1971). "Some optimal multivariate tests."
+           Biometrika, 58(1), 123-127.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -136,6 +135,31 @@ def john_sphericity(X):
 
 # Checked
 def srivastava_2005_sphericity(X):
+    """Srivastava (2005) test for sphericity.
+
+    High-dimensional test for H0: Sigma = c * I_p for some c > 0.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        Data matrix where rows are samples and columns are features.
+
+    Returns
+    -------
+    result : dict
+        Dictionary with keys:
+
+        - 'stat' : float
+            Test statistic (asymptotically normal).
+        - 'p_value' : float
+            Right-tail p-value from standard normal distribution.
+
+    References
+    ----------
+    .. [1] Srivastava, M. S. (2005). "Some tests concerning the
+           covariance matrix in high dimensional data." Journal of
+           the Japan Statistical Society, 35(2), 251-272.
+    """
     X = validate_data_matrix(X)
     n = X.shape[0]
     S = np.cov(X.T)
