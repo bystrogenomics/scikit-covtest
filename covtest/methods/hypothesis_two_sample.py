@@ -8,6 +8,7 @@ from . import _ahmad2017 as ahmad2017
 from . import _ding as ding2023
 from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
+from .utils import validate_data_matrix
 
 
 def ahmad_2015_two_sample(X, Y):
@@ -29,6 +30,8 @@ def ahmad_2015_two_sample(X, Y):
         - 'stat': test statistic
         - 'p_value': p-value based on asymptotic normality
     """
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     n1, p = X.shape
     n2 = Y.shape[0]
 
@@ -54,7 +57,7 @@ def ahmad_2015_two_sample(X, Y):
     }
 
 
-def boxm_test(x, y, type="chi.squared"):
+def boxm_test(X, Y, type="chi.squared"):
     """
     Test equality of two covariance matrices via Box's M test.
 
@@ -66,9 +69,9 @@ def boxm_test(x, y, type="chi.squared"):
 
     Parameters
     ----------
-    x : array-like of shape (n_samples_x, n_features)
+    X : array-like of shape (n_samples_x, n_features)
         First data matrix. Rows are samples and columns are features.
-    y : array-like of shape (n_samples_y, n_features)
+    Y : array-like of shape (n_samples_y, n_features)
         Second data matrix. Rows are samples and columns are features.
     type : {"chi.squared", "F"}, default="chi.squared"
         Reference distribution used to compute the p-value.
@@ -91,7 +94,7 @@ def boxm_test(x, y, type="chi.squared"):
     Raises
     ------
     ValueError
-        If ``x`` and ``y`` do not have the same number of columns
+        If ``X`` and ``Y`` do not have the same number of columns
         (features).
     ValueError
         If ``n_features >= n_samples_x`` or ``n_features >= n_samples_y``.
@@ -140,20 +143,20 @@ def boxm_test(x, y, type="chi.squared"):
     >>> res_alt["p_value"] < 0.05
     True
     """
-    x = np.asarray(x)
-    y = np.asarray(y)
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
 
-    if x.shape[1] != y.shape[1]:
+    if X.shape[1] != Y.shape[1]:
         raise ValueError("Dimensions do not match")
-    if x.shape[1] >= x.shape[0] or y.shape[1] >= y.shape[0]:
+    if X.shape[1] >= X.shape[0] or Y.shape[1] >= Y.shape[0]:
         raise ValueError("This is not a high dimensional test")
 
-    n, p = x.shape
-    m = y.shape[0]
+    n, p = X.shape
+    m = Y.shape[0]
 
     # Sample covariance matrices
-    s1 = np.cov(x, rowvar=False, bias=False)
-    s2 = np.cov(y, rowvar=False, bias=False)
+    s1 = np.cov(X, rowvar=False, bias=False)
+    s2 = np.cov(Y, rowvar=False, bias=False)
 
     # Pooled covariance
     s_pooled = ((n - 1) * s1 + (m - 1) * s2) / (n + m - 2)
@@ -220,6 +223,8 @@ def ishii_two_sample(X1, X2, test="full"):
     -------
     result : dict
     """
+    X1 = validate_data_matrix(X1)
+    X2 = validate_data_matrix(X2)
     if X1.shape[1] < 1000:
         raise Warning(
             "Ishii et al (2015) known to be unreliable when d is small"
@@ -321,6 +326,8 @@ def schott_2001(X, Y):
     Schott (2001) homogeneity of covariance matrices test.
     Uses asymptotic normal distribution under H0.
     """
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     # k = len(x)
     k = 2
     p = X.shape[1]
@@ -427,6 +434,8 @@ def _srivastava_yanagihara_stat(x):
 
 
 def srivastava_yanagihara_two_sample(X, Y):
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     matrix_ls = [X, Y]
 
     # Compute the statistic
@@ -519,6 +528,8 @@ def _srivastava_2007_stat(x):
 
 
 def srivastava_two_sample_2007(X, Y):
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     matrix_ls = [X, Y]
 
     # Compute the statistic
@@ -535,7 +546,7 @@ def srivastava_two_sample_2007(X, Y):
     return results
 
 
-def wald_two_sample(x, y):
+def wald_two_sample(X, Y):
     """
     Two-sample Wald test for equality of covariance matrices.
 
@@ -547,10 +558,10 @@ def wald_two_sample(x, y):
 
     Parameters
     ----------
-    x : array-like, shape (n, p)
+    X : array-like, shape (n, p)
         Data matrix for group 1 with rows as samples and columns as
         variables.
-    y : array-like, shape (m, p)
+    Y : array-like, shape (m, p)
         Data matrix for group 2 with rows as samples and columns as
         variables.
 
@@ -561,20 +572,20 @@ def wald_two_sample(x, y):
         - "test_statistic": the Wald test statistic
         - "p_value": the corresponding chi-squared p-value
     """
-    x = np.asarray(x)
-    y = np.asarray(y)
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
 
-    if x.shape[1] != y.shape[1]:
+    if X.shape[1] != Y.shape[1]:
         raise ValueError("Dimensions do not match")
-    if x.shape[1] >= x.shape[0] or y.shape[1] >= y.shape[0]:
+    if X.shape[1] >= X.shape[0] or Y.shape[1] >= Y.shape[0]:
         raise ValueError("This is not a high dimensional test")
 
-    n, p = x.shape
-    m = y.shape[0]
+    n, p = X.shape
+    m = Y.shape[0]
 
     # Sample covariances
-    s1 = np.cov(x, rowvar=False, bias=False)
-    s2 = np.cov(y, rowvar=False, bias=False)
+    s1 = np.cov(X, rowvar=False, bias=False)
+    s2 = np.cov(Y, rowvar=False, bias=False)
 
     # Pooled covariance
     s_pooled = ((n - 1) * s1 + (m - 1) * s2) / (n + m - 2)
@@ -608,6 +619,8 @@ def wald_two_sample(x, y):
 
 
 def tyler_two_sample(X1, X2, unknown_mean=False):
+    X1 = validate_data_matrix(X1)
+    X2 = validate_data_matrix(X2)
     n1, p = X1.shape
     n2, _ = X2.shape
 

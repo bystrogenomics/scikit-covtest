@@ -12,6 +12,7 @@ from . import _eriksen_1987 as eriksen1987
 from . import _flurry_1986 as flurry1986
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
+from .utils import validate_data_matrix
 
 ArrayLike = np.ndarray
 
@@ -21,7 +22,7 @@ ArrayLike = np.ndarray
 
 
 def flury_proportionality_test(
-    X_in,
+    X,
     Y,
     max_iter: int = 1000,
     tol: float = 1e-9,
@@ -40,7 +41,9 @@ def flury_proportionality_test(
     out : dict
         See flury_proportionality_test_from_cov.
     """
-    X_list = [X_in, Y]
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
+    X_list = [X, Y]
     S_list = []
     n_list = []
     for X in X_list:
@@ -120,6 +123,8 @@ def bartlett_adjusted_proportionality_test(
         - 'pvalue_adj'  : Bartlett-adjusted p-value    (χ²_df right-tail)
         - 'Sigma_hat', 'c_hat', 'converged', 'iterations', 'n_list', 'S_list'
     """
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     X_groups = [X, Y]
     rng = np.random.default_rng(random_state)
 
@@ -212,8 +217,8 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     -----
     Requires p < n2 = N2 - 1.
     """
-    X = np.asarray(X, float)
-    Y = np.asarray(Y, float)
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     N1, p = X.shape
     N2, p2 = Y.shape
     assert p == p2, "X and Y must have the same number of columns (p)."
@@ -327,8 +332,8 @@ def proportionality_test_signs(
     Use asymptotic calibrations when permutation is too costly or when exchangeability
     is not appropriate, but expect some approximation error in small samples.
     """
-    X = np.asarray(X, dtype=float)
-    Y = np.asarray(Y, dtype=float)
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     n1, p1 = X.shape
     n2, p2 = Y.shape
     if p1 != p2:
@@ -427,6 +432,8 @@ def proportionality_plrt(X, Y, dist_moments="gaussian"):
         raise NotImplementedError("Only Gaussian case implemented.")
 
     # T1 statistic
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     A = S1 @ inv(S2)
     tr_term = np.trace(A) / p
     sign, logdet = slogdet(A)
@@ -553,8 +560,8 @@ def proportional_cov_test_tsukuda(
     - Since Sx and Sy are independent unbiased estimators of Sigma_x and
       Sigma_y, tr(Sx * Sy) is an unbiased estimator of tr(Sigma_x * Sigma_y).
     """
-    X = np.asarray(X, dtype=float)
-    Y = np.asarray(Y, dtype=float)
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
     if X.ndim != 2 or Y.ndim != 2:
         raise ValueError("X and Y must be 2D arrays (observations × features).")
     m, pX = X.shape
