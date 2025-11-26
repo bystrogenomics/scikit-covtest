@@ -36,6 +36,7 @@ from scipy.stats import norm
 
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
+from .utils import validate_data_matrix
 
 
 def _ahmad_2015_stat(x: np.ndarray) -> float:
@@ -60,20 +61,21 @@ def _ahmad_2015_stat(x: np.ndarray) -> float:
     return nrow * (c3 / ncol - 2.0 * c1 / ncol + 1.0)
 
 
-def ahmad2015_identity(x, Sigma="identity"):
+def ahmad2015_identity(X, Sigma="identity"):
     """
     Ahmad & von Rosen (2015) test of covariance matrix structure,
-    when a data matrix x (n x p) is supplied.
+    when a data matrix X (n x p) is supplied.
     """
-    n, p = x.shape
+    X = validate_data_matrix(X)
+    n, p = X.shape
 
     if Sigma == "identity":
-        x_ = x
+        X_ = X
     else:
         u_s, d_s, _ = svd(Sigma)
-        x_ = x @ solve(u_s @ np.diag(np.sqrt(d_s)), np.eye(p))
+        X_ = X @ solve(u_s @ np.diag(np.sqrt(d_s)), np.eye(p))
 
-    statistic = _ahmad_2015_stat(x_)
+    statistic = _ahmad_2015_stat(X_)
     parameter = {"Mean": 0, "Variance": 4 * (2 / (p / n + 1))}
     pval = 2 * (
         1
@@ -128,12 +130,12 @@ def _ledoit_wolf_stat(data):
 
 
 # Checked
-def ledoit_wolf_identity(data):
+def ledoit_wolf_identity(X):
     """Perform the Ledoit–Wolf test for identity covariance.
 
     Parameters
     ----------
-    data : array-like of shape (n_samples, n_features)
+    X : array-like of shape (n_samples, n_features)
         The data matrix, where rows correspond to samples and
         columns to variables.
 
@@ -147,8 +149,9 @@ def ledoit_wolf_identity(data):
         - ``'p_value'`` : float
             The p-value from the chi-square distribution.
     """
-    n, p = data.shape
-    W = _ledoit_wolf_stat(data)
+    X = validate_data_matrix(X)
+    n, p = X.shape
+    W = _ledoit_wolf_stat(X)
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * W
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
@@ -192,12 +195,12 @@ def _nagao_stat(data):
 
 
 # Checked
-def nagao_identity(data):
+def nagao_identity(X):
     """Perform Nagao’s test for identity covariance.
 
     Parameters
     ----------
-    data : array-like of shape (n_samples, n_features)
+    X : array-like of shape (n_samples, n_features)
         The data matrix, where rows correspond to samples and columns to variables.
 
     Returns
@@ -223,8 +226,9 @@ def nagao_identity(data):
     The null hypothesis is :math:`\\Sigma = I_p`, where :math:`\\Sigma` is the covariance
     matrix and :math:`I_p` is the identity matrix.
     """
-    n, p = data.shape
-    V = _nagao_stat(data)
+    X = validate_data_matrix(X)
+    n, p = X.shape
+    V = _nagao_stat(X)
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * V
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
@@ -234,6 +238,7 @@ def nagao_identity(data):
 
 # Checked
 def srivastava_2005_identity(X):
+    X = validate_data_matrix(X)
     n = X.shape[0]
     S = np.cov(X.T)
     T_1 = s2005.T_1_stat(S, n)
@@ -250,6 +255,7 @@ def tyler_identity(X, unknown_mean=False, method="tr"):
     One-sample test H0: Sigma = I_p.
     If unknown_mean=True, uses robust location-adjusted version.
     """
+    X = validate_data_matrix(X)
     n, p = X.shape
     if unknown_mean:
         mu_hat = tyler.robust_location(X)
@@ -309,10 +315,11 @@ def _fisher_2012_stat_(n, p, S_):
     return (n / np.sqrt(8 * (c**2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
 
 
-def fisher_single_sample(x, Sigma="identity"):
-    p = x.shape[1]
-    n = x.shape[0]
-    S = np.cov(x, rowvar=False)
+def fisher_single_sample(X, Sigma="identity"):
+    X = validate_data_matrix(X)
+    p = X.shape[1]
+    n = X.shape[0]
+    S = np.cov(X, rowvar=False)
 
     if Sigma == "identity":
         S_ = S
@@ -345,10 +352,11 @@ def _srivastava2011_(n, p, S_):
     return n * (term1 - term2 + 1) / 2
 
 
-def srivastava2011_single_sample(x, Sigma="identity"):
-    p = x.shape[1]
-    n = x.shape[0]
-    S = np.cov(x, rowvar=False)
+def srivastava2011_single_sample(X, Sigma="identity"):
+    X = validate_data_matrix(X)
+    p = X.shape[1]
+    n = X.shape[0]
+    S = np.cov(X, rowvar=False)
 
     if Sigma == "identity":
         S_ = S
