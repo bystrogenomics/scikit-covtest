@@ -6,20 +6,69 @@ from scipy.stats import chi2, lognorm, norm
 
 
 def _center(X):
+    """Center data by subtracting column means.
+
+    Parameters
+    ----------
+    X : ndarray of shape (n_samples, n_features)
+        Input data matrix.
+
+    Returns
+    -------
+    X_centered : ndarray of shape (n_samples, n_features)
+        Centered data with zero mean for each column.
+    """
     return X - np.mean(X, axis=0, keepdims=True)
 
 
 def _cov(X, ddof=1):
+    """Compute covariance matrix.
+
+    Parameters
+    ----------
+    X : ndarray of shape (n_samples, n_features)
+        Input data matrix (assumed centered).
+    ddof : int, default=1
+        Delta degrees of freedom. Divides by (n - ddof).
+
+    Returns
+    -------
+    cov : ndarray of shape (n_features, n_features)
+        Covariance matrix.
+    """
     n = X.shape[0]
     return (X.T @ X) / (n - ddof)
 
 
 def _mahalanobis2(X, mu, Sigma_inv):
+    """Compute squared Mahalanobis distances.
+
+    Parameters
+    ----------
+    X : ndarray of shape (n_samples, n_features)
+        Data points.
+    mu : ndarray of shape (n_features,)
+        Center point (typically the mean).
+    Sigma_inv : ndarray of shape (n_features, n_features)
+        Inverse covariance matrix.
+
+    Returns
+    -------
+    distances : ndarray of shape (n_samples,)
+        Squared Mahalanobis distances from mu.
+    """
     D = X - mu
     return np.sum(D @ Sigma_inv * D, axis=1)
 
 
 def _remove_top_right_spines(ax):
+    """Remove top and right spines from matplotlib axes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes object to modify.
+    """
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_linewidth(1.5)
@@ -118,25 +167,104 @@ def eigen_spectrum(
 
 def mardia_tests(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     """
-    Compute Mardia's multivariate skewness and kurtosis tests.
+    Compute Mardia's multivariate skewness and kurtosis tests for normality.
+
+    Mardia's tests assess multivariate normality by examining the third and
+    fourth moments of the multivariate distribution. The skewness test is
+    based on the chi-squared distribution, while the kurtosis test uses a
+    normal approximation.
 
     Parameters
     ----------
-    data : ndarray (n × p)
-        Observations (rows = samples, columns = variables).
+    data : array-like of shape (n_samples, n_features)
+        Observations where rows are samples and columns are variables.
+        Must have at least 2 features.
+
     use_population : bool, default=True
-        Whether to use the population covariance (dividing by n) instead of the sample covariance (dividing by n-1).
+        If True, use population covariance (divide by n). If False, use
+        sample covariance (divide by n-1).
+
     tol : float, default=1e-25
-        Tolerance for covariance inversion.
+        Tolerance for covariance matrix inversion.
+
     bootstrap : bool, default=False
-        If True, perform parametric bootstrap for p-values.
+        If True, compute p-values using parametric bootstrap instead of
+        asymptotic approximations.
+
     B : int, default=1000
-        Number of bootstrap replicates.
+        Number of bootstrap replicates (only used if bootstrap=True).
 
     Returns
     -------
-    result : dict
-        Contains test names, statistics, p-values, and method info.
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'Test' : list of str
+            Names of the tests: ['Mardia Skewness', 'Mardia Kurtosis'].
+
+        - 'stat' : list of float
+            Test statistics for skewness and kurtosis.
+
+        - 'p_value' : list of float
+            P-values for each test.
+
+        - 'Method' : list of str
+            Method used: 'asymptotic' or 'bootstrap'.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 variables are provided.
+        If covariance matrix is singular or near-singular.
+
+    Notes
+    -----
+    Mardia's skewness measure is defined as:
+
+    .. math::
+
+        g_{1,p} = \\frac{1}{n^2} \\sum_{i=1}^n \\sum_{j=1}^n d_{ij}^3
+
+    where :math:`d_{ij}` is the Mahalanobis distance between observations i and j.
+
+    Mardia's kurtosis measure is:
+
+    .. math::
+
+        g_{2,p} = \\frac{1}{n} \\sum_{i=1}^n d_{ii}^2
+
+    The skewness test statistic follows a chi-squared distribution with
+    p(p+1)(p+2)/6 degrees of freedom. The kurtosis test statistic is
+    approximately standard normal.
+
+    Rows with missing values are automatically removed with a warning.
+
+    References
+    ----------
+    .. [1] Mardia, K. V. (1970). Measures of multivariate skewness and
+           kurtosis with applications. Biometrika, 57(3), 519-530.
+
+    .. [2] Mardia, K. V. (1974). Applications of some measures of
+           multivariate skewness and kurtosis in testing normality and
+           robustness studies. Sankhyā: The Indian Journal of Statistics,
+           Series B, 115-128.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> # Multivariate normal data
+    >>> data = np.random.multivariate_normal([0, 0], [[1, 0.5], [0.5, 1]], 100)
+    >>> results = mardia_tests(data)
+    >>> results['Test']
+    ['Mardia Skewness', 'Mardia Kurtosis']
+    >>> results['p_value'][0] > 0.05  # Should not reject normality
+    True
+
+    >>> # With bootstrap
+    >>> results_boot = mardia_tests(data, bootstrap=True, B=500)
+    >>> results_boot['Method']
+    ['bootstrap', 'bootstrap']
     """
 
     # --- Basic validation ---
@@ -229,8 +357,55 @@ def mardia_tests(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
 
 def shapiro_francia_w(x):
     """
-    Compute the Shapiro–Francia W statistic for a 1D array x.
-    Based on Royston (1992) and original formula.
+    Compute the Shapiro-Francia W statistic for univariate normality.
+
+    The Shapiro-Francia test is a modification of the Shapiro-Wilk test
+    that uses the correlation between ordered observations and expected
+    normal order statistics.
+
+    Parameters
+    ----------
+    x : array-like of shape (n_samples,)
+        1D array of observations. Must have at least 3 samples.
+
+    Returns
+    -------
+    w : float
+        Shapiro-Francia W statistic. Values close to 1 indicate normality.
+
+    Raises
+    ------
+    ValueError
+        If sample size is less than 3.
+
+    Notes
+    -----
+    The W statistic is computed as:
+
+    .. math::
+
+        W = \\frac{(\\sum m_i x_{(i)})^2}{\\sum (x_i - \\bar{x})^2}
+
+    where :math:`m_i` are the expected normal order statistics (Blom's formula)
+    and :math:`x_{(i)}` are the ordered observations.
+
+    References
+    ----------
+    .. [1] Shapiro, S. S., & Francia, R. S. (1972). An approximate analysis
+           of variance test for normality. Journal of the American
+           Statistical Association, 67(337), 215-216.
+
+    .. [2] Royston, P. (1992). Approximating the Shapiro-Wilk W-test for
+           non-normality. Statistics and Computing, 2(3), 117-119.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> x_normal = np.random.normal(0, 1, 50)
+    >>> w = shapiro_francia_w(x_normal)
+    >>> w > 0.95  # High W indicates normality
+    True
     """
     n = len(x)
     if n < 3:
@@ -249,17 +424,69 @@ def shapiro_francia_w(x):
 
 def royston_test(data):
     """
-    Royston's multivariate normality test (Python version matching MVN::roystonTest).
+    Apply Royston's multivariate normality test.
+
+    Royston's test extends the Shapiro-Wilk/Shapiro-Francia tests to the
+    multivariate case by combining univariate normality tests for each
+    variable with a correlation adjustment.
 
     Parameters
     ----------
-    data : ndarray (n × p)
-        Input data array.
+    data : array-like of shape (n_samples, n_features)
+        Input data array. Must have at least 2 features.
 
     Returns
     -------
-    dict
-        {'Test', 'Statistic', 'p.value', 'Method'}
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'Test' : str
+            Always 'Royston' to indicate the test used.
+
+        - 'stat' : float
+            H test statistic.
+
+        - 'p_value' : float
+            P-value from chi-squared distribution.
+
+        - 'Method' : str
+            Always 'asymptotic'.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 variables are provided.
+        If sample size is not in range (3, 2000].
+
+    Notes
+    -----
+    The test computes Shapiro-Francia W statistics for each variable,
+    transforms them to z-scores, and combines them with a correlation
+    adjustment to account for dependencies among variables.
+
+    The H statistic follows a chi-squared distribution with effective
+    degrees of freedom adjusted for the correlation structure.
+
+    References
+    ----------
+    .. [1] Royston, J. P. (1982). An extension of Shapiro and Wilk's W
+           test for normality to large samples. Journal of the Royal
+           Statistical Society: Series C (Applied Statistics), 31(2),
+           115-124.
+
+    .. [2] Royston, J. P. (1992). Approximating the Shapiro-Wilk W-test
+           for non-normality. Statistics and Computing, 2(3), 117-119.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> data = np.random.multivariate_normal([0, 0], [[1, 0.3], [0.3, 1]], 50)
+    >>> results = royston_test(data)
+    >>> results['Test']
+    'Royston'
+    >>> results['p_value'] > 0.05  # Should not reject normality
+    True
     """
     x = np.asarray(data, dtype=float)
     n, p = x.shape
@@ -276,9 +503,7 @@ def royston_test(data):
         # Small sample constants
         g = -2.273 + 0.459 * n
         m = 0.544 - 0.39978 * n + 0.025054 * n**2 - 0.0006714 * n**3
-        s = np.exp(
-            1.3822 - 0.77857 * n + 0.062767 * n**2 - 0.0020322 * n**3
-        )
+        s = np.exp(1.3822 - 0.77857 * n + 0.062767 * n**2 - 0.0020322 * n**3)
         small_sample = True
     else:
         # Large sample constants
@@ -322,25 +547,102 @@ def royston_test(data):
 
 def hz_test(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     """
-    Henze–Zirkler test for multivariate normality.
+    Apply Henze-Zirkler test for multivariate normality.
+
+    The Henze-Zirkler test is a powerful omnibus test for multivariate
+    normality based on a non-negative functional distance that measures
+    the distance between two distribution functions.
 
     Parameters
     ----------
-    data : ndarray (n × p)
-        Input data matrix.
+    data : array-like of shape (n_samples, n_features)
+        Input data matrix. Must have at least 2 features.
+
     use_population : bool, default=True
-        Whether to use the population covariance (divide by n) or sample covariance (divide by n-1).
+        If True, use population covariance (divide by n). If False, use
+        sample covariance (divide by n-1).
+
     tol : float, default=1e-25
-        Tolerance for covariance inversion.
+        Tolerance for covariance matrix inversion.
+
     bootstrap : bool, default=False
-        Whether to use a parametric bootstrap for the p-value.
+        If True, compute p-value using parametric bootstrap instead of
+        the log-normal approximation.
+
     B : int, default=1000
         Number of bootstrap replicates (only used if bootstrap=True).
 
     Returns
     -------
-    dict
-        With test name, statistic, p-value, and method info.
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'Test' : str
+            Always 'Henze–Zirkler'.
+
+        - 'stat' : float
+            HZ test statistic.
+
+        - 'p_value' : float
+            P-value from log-normal approximation or bootstrap.
+
+        - 'Method' : str
+            Either 'asymptotic' or 'bootstrap'.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 variables are provided.
+        If covariance matrix is singular or near-singular.
+
+    Notes
+    -----
+    The HZ statistic is based on the weighted L2 distance between the
+    empirical characteristic function and the characteristic function
+    of a multivariate normal distribution.
+
+    The test uses a smoothing parameter b that depends on the sample size
+    and dimensionality:
+
+    .. math::
+
+        b = n^{1/(p+4)} \\left(\\frac{2p+1}{4}\\right)^{1/(p+4)} / \\sqrt{2}
+
+    Under the null hypothesis of multivariate normality, the HZ statistic
+    follows approximately a log-normal distribution.
+
+    Rows with missing values are automatically removed with a warning.
+
+    References
+    ----------
+    .. [1] Henze, N., & Zirkler, B. (1990). A class of invariant consistent
+           tests for multivariate normality. Communications in Statistics-
+           Theory and Methods, 19(10), 3595-3617.
+
+    .. [2] Mecklin, C. J., & Mundfrom, D. J. (2005). A Monte Carlo
+           comparison of the Type I and Type II error rates of tests of
+           multivariate normality. Journal of Statistical Computation and
+           Simulation, 75(2), 93-107.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> # Multivariate normal data
+    >>> data = np.random.multivariate_normal([0, 0, 0],
+    ...                                       [[1, 0.5, 0.3],
+    ...                                        [0.5, 1, 0.4],
+    ...                                        [0.3, 0.4, 1]], 100)
+    >>> results = hz_test(data)
+    >>> results['Test']
+    'Henze–Zirkler'
+    >>> results['p_value'] > 0.05  # Should not reject normality
+    True
+
+    >>> # With bootstrap
+    >>> results_boot = hz_test(data, bootstrap=True, B=500)
+    >>> results_boot['Method']
+    'bootstrap'
     """
 
     # --- Validate and clean data ---
@@ -396,18 +698,10 @@ def hz_test(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
         2 * (1 + 4 * b**2) ** (-p / 2)
         + 2
         * a ** (-p)
-        * (
-            1
-            + (2 * p * b**4) / a**2
-            + (3 * p * (p + 2) * b**8) / (4 * a**4)
-        )
+        * (1 + (2 * p * b**4) / a**2 + (3 * p * (p + 2) * b**8) / (4 * a**4))
         - 4
         * wb ** (-p / 2)
-        * (
-            1
-            + (3 * p * b**4) / (2 * wb)
-            + (p * (p + 2) * b**8) / (2 * wb**2)
-        )
+        * (1 + (3 * p * b**4) / (2 * wb) + (p * (p + 2) * b**8) / (2 * wb**2))
     )
     pmu = np.log(np.sqrt(mu**4 / (si2 + mu**2)))
     psi = np.sqrt(np.log((si2 + mu**2) / mu**2))

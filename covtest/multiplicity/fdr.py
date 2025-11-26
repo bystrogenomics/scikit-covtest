@@ -1,45 +1,70 @@
-"""
-False Discovery Rate (FDR) control procedures.
+"""False discovery rate (FDR) multiple testing corrections.
 
-This module implements standard and adaptive procedures for controlling
-the false discovery rate, defined as the expected proportion of false
-rejections among all rejections.
+This module implements procedures that control the false discovery rate (FDR),
+defined as the expected proportion of false rejections among all rejected null
+hypotheses, in multiple hypothesis testing problems.
 
-Implemented methods
--------------------
-- Benjamini–Hochberg (1995)
-- Benjamini–Yekutieli (2001), robust under arbitrary dependence
-- Weighted BH (Genovese et al., 2006)
-- Storey–Tibshirani q-values (2003) with pi0 estimation
+Functions
+---------
+benjamini_hochberg
+    Classical Benjamini-Hochberg step-up procedure for FDR control under
+    independence or certain forms of positive dependence.
 
-References
-----------
-.. [1] Benjamini, Y., & Hochberg, Y. (1995).
-       "Controlling the false discovery rate: a practical and powerful 
-        approach to multiple testing".
-       Journal of the Royal Statistical Society: Series B, 57(1), 289–300.
-.. [2] Benjamini, Y., & Yekutieli, D. (2001).
-       "The control of the false discovery rate in multiple testing under dependency".
-       Annals of Statistics, 29(4), 1165–1188.
-.. [3] Storey, J. D., & Tibshirani, R. (2003).
-       "Statistical significance for genomewide studies".
-       Proceedings of the National Academy of Sciences, 100(16), 9440–9445.
-.. [4] Genovese, C. R., Roeder, K., & Wasserman, L. (2006).
-       "False discovery control with p-value weighting".
-       Biometrika, 93(3), 509–524.
+benjamini_liu
+    Benjamini-Liu step-down procedure for FDR control under independence.
+
+benjamini_yekutieli
+    Benjamini-Yekutieli procedure for FDR control under arbitrary dependence
+    among test statistics, using a harmonic series correction factor.
+
+blaroq
+    Blanchard-Roquain step-up procedure for FDR control under arbitrary
+    dependence using a prior over hypotheses.
+
+weighted_bh
+    Weighted Benjamini-Hochberg procedure that incorporates prior weights
+    on hypotheses.
+
+storey_qvalues
+    Storey-Tibshirani q-value procedure that estimates the proportion of
+    true null hypotheses to obtain less conservative corrections.
 
 Notes
 -----
-- Weighted BH requires nonnegative weights; recommended normalization is
-  to sum to the number of hypotheses.
-- Storey’s method estimates the proportion of true nulls (pi0) adaptively
-  to increase power.
+These procedures provide less conservative alternatives to family-wise error
+rate (FWER) control methods by allowing a controlled fraction of false
+discoveries. Under suitable assumptions, they often yield higher power than
+FWER-based corrections such as Bonferroni or Holm.
 
+See Also
+--------
+covtest.multiplicity.fwer
+    Family-wise error rate (FWER) control procedures.
+
+References
+----------
+.. [1] Benjamini, Y., and Hochberg, Y. (1995).
+       "Controlling the false discovery rate: a practical and powerful
+       approach to multiple testing."
+       Journal of the Royal Statistical Society: Series B, 57(1), 289-300.
+.. [2] Benjamini, Y., and Yekutieli, D. (2001).
+       "The control of the false discovery rate in multiple testing
+       under dependency."
+       Annals of Statistics, 29(4), 1165-1188.
+.. [3] Storey, J. D., and Tibshirani, R. (2003).
+       "Statistical significance for genomewide studies."
+       Proceedings of the National Academy of Sciences, 100(16), 9440-9445.
+.. [4] Genovese, C. R., Roeder, K., and Wasserman, L. (2006).
+       "False discovery control with p-value weighting."
+       Biometrika, 93(3), 509-524.
+.. [5] Blanchard, G., and Roquain, E. (2008).
+       "Two simple sufficient conditions for FDR control."
+       Electronic Journal of Statistics, 2, 963-992.
 
 Examples
 --------
 >>> import numpy as np
->>> from yourpackage.multiplicity import fdr
+>>> from covtest.multiplicity import fdr
 >>> pvals = np.array([0.001, 0.02, 0.2, 0.6])
 >>> res = fdr.benjamini_hochberg(pvals, alpha=0.05)
 >>> res["rejected"]
@@ -62,23 +87,52 @@ __all__ = [
 
 def SUD(pvalues, critical_values, start_idx_sud):
     """
-    Step-Up/Step-Down (SUD) procedure.
+    Step-Up/Step-Down (SUD) procedure for multiple testing.
+
+    This is a general procedure that can perform either step-down or step-up
+    testing depending on the starting index. It compares p-values against
+    critical values to determine which hypotheses to reject.
 
     Parameters
     ----------
-    pvalues : array-like
-        List or numpy array of p-values.
-    critical_values : array-like
-        Critical values (same length as pvalues).
+    pvalues : array-like of shape (m,)
+        P-values from multiple hypothesis tests.
+
+    critical_values : array-like of shape (m,)
+        Critical values corresponding to each p-value. Must have the same
+        length as pvalues.
+
     start_idx_sud : int
-        Starting index (1-based, as in the R code).
-        * 1  => Step-Down (SD)
-        * m  => Step-Up   (SU)
+        Starting index (1-based indexing, as in the original R implementation).
+        Controls the direction of the procedure:
+
+        - 1 : Step-Down (SD) procedure
+        - m : Step-Up (SU) procedure
 
     Returns
     -------
-    rejected : numpy array of bool
+    rejected : ndarray of shape (m,), dtype=bool
         Boolean array indicating which hypotheses are rejected.
+
+    Raises
+    ------
+    ValueError
+        If only 1 critical value is provided (use SS() instead).
+        If lengths of critical_values and pvalues do not match.
+        If start_idx_sud is out of bounds [1, m].
+
+    Notes
+    -----
+    The procedure works as follows:
+
+    1. Sort p-values in ascending order
+    2. Compare sorted p-values with critical values
+    3. If p-value at start_idx_sud is suspicious (≤ critical value):
+       - Perform Step-Down: find first non-suspicious value and reject all before it
+    4. Otherwise:
+       - Perform Step-Up: find last suspicious value and reject all up to it
+
+    This is a helper function used by SD() and SU() procedures.
     """
     pvalues = np.asarray(pvalues, dtype=float)
     critical_values = np.asarray(critical_values, dtype=float)
@@ -131,12 +185,58 @@ def SUD(pvalues, critical_values, start_idx_sud):
 
 
 def SD(pvalues, critical_values):
-    """Step-Down = SUD with start_idx=1."""
+    """
+    Step-Down procedure for multiple testing.
+
+    This is a wrapper around SUD that performs step-down testing by starting
+    from the smallest p-value.
+
+    Parameters
+    ----------
+    pvalues : array-like of shape (m,)
+        P-values from multiple hypothesis tests.
+
+    critical_values : array-like of shape (m,)
+        Critical values corresponding to each p-value.
+
+    Returns
+    -------
+    rejected : ndarray of shape (m,), dtype=bool
+        Boolean array indicating which hypotheses are rejected.
+
+    See Also
+    --------
+    SUD : General step-up/step-down procedure.
+    SU : Step-up procedure.
+    """
     return SUD(pvalues, critical_values, start_idx_sud=1)
 
 
 def SU(pvalues, critical_values):
-    """Step-Up = SUD with start_idx=m."""
+    """
+    Step-Up procedure for multiple testing.
+
+    This is a wrapper around SUD that performs step-up testing by starting
+    from the largest p-value.
+
+    Parameters
+    ----------
+    pvalues : array-like of shape (m,)
+        P-values from multiple hypothesis tests.
+
+    critical_values : array-like of shape (m,)
+        Critical values corresponding to each p-value.
+
+    Returns
+    -------
+    rejected : ndarray of shape (m,), dtype=bool
+        Boolean array indicating which hypotheses are rejected.
+
+    See Also
+    --------
+    SUD : General step-up/step-down procedure.
+    SD : Step-down procedure.
+    """
     return SUD(pvalues, critical_values, start_idx_sud=len(critical_values))
 
 
@@ -220,28 +320,81 @@ def benjamini_hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
 def benjamini_liu(pvalues, alpha=0.05, verbose=False):
     """
-    Benjamini–Liu (1999) step-down FDR procedure.
+    Apply Benjamini-Liu step-down FDR procedure.
+
+    The Benjamini-Liu (1999) procedure is a step-down method for controlling
+    the false discovery rate. It is more powerful than the standard
+    Benjamini-Hochberg procedure under certain dependence structures,
+    particularly for positively dependent test statistics.
 
     Parameters
     ----------
-    pvalues : array-like
-        List or numpy array of p-values.
-    alpha : float
-        Significance level.
-    verbose : bool
-        If True, prints summary.
+    pvalues : array-like of shape (n_tests,)
+        P-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired false discovery rate level. Must be between 0 and 1.
+
+    verbose : bool, default=False
+        If True, prints a summary of the procedure results including
+        the alpha level and indices of rejected hypotheses.
 
     Returns
     -------
-    dict with keys:
-        qvals : numpy array
-            Adjusted q-values (like adj p-values).
-        rejected : numpy array of bool
-            Whether each hypothesis is rejected.
-        alpha : float
-            The significance threshold used.
-        method : str
-            Name of the procedure ("BL").
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'qvals' : ndarray of shape (n_tests,)
+            Adjusted p-values (q-values) corresponding to the input p-values.
+            These represent the minimum FDR at which each hypothesis would
+            be rejected.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FDR level used for the correction.
+
+        - 'method' : str
+            Always 'BL' to indicate Benjamini-Liu procedure.
+
+    Notes
+    -----
+    The Benjamini-Liu procedure uses critical values of the form:
+
+    .. math::
+
+        c_i = 1 - (1 - \\min(1, m\\alpha/(m-i+1)))^{1/(m-i+1)}
+
+    where m is the number of tests and i is the rank of the p-value.
+
+    The adjusted q-values are computed using a step-down approach that
+    accounts for the dependence structure among tests.
+
+    References
+    ----------
+    .. [1] Benjamini, Y., & Liu, W. (1999). A step-down multiple hypotheses
+           testing procedure that controls the false discovery rate under
+           independence. Journal of Statistical Planning and Inference,
+           82(1-2), 163-170.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.001, 0.01, 0.2, 0.5])
+    >>> results = benjamini_liu(pvals, alpha=0.05)
+    >>> results['rejected']
+    array([ True,  True, False, False])
+    >>> np.round(results['qvals'], 4)
+    array([0.004 , 0.0223, 0.18  , 0.18  ])
+
+    >>> # Compare with standard BH
+    >>> from covtest.multiplicity.fdr import benjamini_hochberg
+    >>> bh_results = benjamini_hochberg(pvals, alpha=0.05)
+    >>> np.sum(results['rejected']) == np.sum(bh_results['rejected'])
+    True
     """
     pvalues = np.asarray(pvalues, dtype=float)
     m = len(pvalues)
@@ -391,30 +544,98 @@ def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
 def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
     """
-    Blanchard–Roquain/Sarkar (2008) step-up procedure for arbitrary dependence.
+    Apply Blanchard-Roquain step-up FDR procedure for arbitrary dependence.
+
+    The Blanchard-Roquain (2008) procedure, also known as the Sarkar procedure,
+    is a step-up method that controls the false discovery rate under arbitrary
+    dependence structures. It uses a weighted prior to improve power while
+    maintaining FDR control without independence assumptions.
 
     Parameters
     ----------
-    pvalues : array-like
-        List or numpy array of p-values.
-    alpha : float
-        Significance level.
-    pii : array-like, optional
-        Prior weights. If None, defaults to exponential decreasing prior.
-    verbose : bool
-        If True, prints summary.
+    pvalues : array-like of shape (n_tests,)
+        P-values from multiple hypothesis tests. Must be numeric values
+        between 0 and 1.
+
+    alpha : float, default=0.05
+        The desired false discovery rate level. Must be between 0 and 1.
+
+    pii : array-like of shape (n_tests,), default=None
+        Prior weights for each hypothesis. If None, uses an exponentially
+        decreasing prior: pii[i] = exp(-i / (0.15 * n_tests)).
+        Must contain only positive values and have the same length as pvalues.
+
+    verbose : bool, default=False
+        If True, prints a summary of the procedure results including
+        the alpha level and indices of rejected hypotheses.
 
     Returns
     -------
-    dict with keys:
-        qvals : numpy array
-            Adjusted p-values (q-values).
-        rejected : numpy array of bool
-            Whether each hypothesis is rejected.
-        alpha : float
-            The significance threshold used.
-        method : str
-            Name of the procedure ("BlaRoq").
+    results : dict
+        Dictionary containing the following keys:
+
+        - 'qvals' : ndarray of shape (n_tests,)
+            Adjusted p-values (q-values) corresponding to the input p-values.
+            These represent the minimum FDR at which each hypothesis would
+            be rejected.
+
+        - 'rejected' : ndarray of shape (n_tests,), dtype=bool
+            Boolean array indicating which null hypotheses are rejected
+            at the given alpha level.
+
+        - 'alpha' : float
+            The FDR level used for the correction.
+
+        - 'method' : str
+            Always 'BlaRoq' to indicate Blanchard-Roquain procedure.
+
+    Raises
+    ------
+    ValueError
+        If prior pii contains negative elements.
+        If prior pii has different length than pvalues.
+
+    Notes
+    -----
+    The procedure uses pre-critical values computed from the prior weights:
+
+    .. math::
+
+        \\text{precritical}_i = \\sum_{j=1}^{i} \\frac{(j+1) \\pi_j}{m}
+
+    where the prior is normalized to sum to 1.
+
+    The adjusted p-values are computed by dividing p-values by pre-critical
+    values and taking the cumulative minimum in reverse order.
+
+    This method is particularly useful when test statistics have complex
+    or unknown dependence structures, as it does not require independence
+    or positive dependence assumptions.
+
+    References
+    ----------
+    .. [1] Blanchard, G., & Roquain, E. (2008). Two simple sufficient
+           conditions for FDR control. Electronic Journal of Statistics,
+           2, 963-992.
+
+    .. [2] Sarkar, S. K. (2008). Generalizing Simes' test and Hochberg's
+           stepup procedure. Annals of Statistics, 36(1), 337-363.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> pvals = np.array([0.001, 0.01, 0.2, 0.5])
+    >>> results = blaroq(pvals, alpha=0.05)
+    >>> results['rejected']
+    array([ True,  True, False, False])
+    >>> np.round(results['qvals'], 4)
+    array([0.0049, 0.0357, 0.6634, 1.    ])
+
+    >>> # Custom prior weights (higher weight for first test)
+    >>> custom_prior = np.array([2.0, 1.0, 1.0, 1.0])
+    >>> results_custom = blaroq(pvals, alpha=0.05, pii=custom_prior)
+    >>> results_custom['rejected']
+    array([ True,  True, False, False])
     """
     pvalues = np.asarray(pvalues, dtype=float)
     k = len(pvalues)
@@ -713,31 +934,6 @@ def storey_qvalues(
     >>> print(f"All null pi_0: {results_null['pi0']:.3f}")
     All null pi_0: 0.983
     """
-    p = np.asarray(pvals, dtype=float)
-    m = p.size
-    if lambdas is None:
-        lambdas = np.linspace(0.05, 0.95, 19)
-
-    ratios = [(p >= lam).mean() / (1 - lam) for lam in lambdas]
-    pi0 = min(1.0, max(0.0, np.min(ratios)))
-
-    order = np.argsort(p)
-    p_sorted = p[order]
-
-    q_sorted = (pi0 * m * p_sorted) / np.arange(1, m + 1)
-    q_sorted = np.minimum.accumulate(q_sorted[::-1])[::-1]
-    q_sorted = np.minimum(q_sorted, 1.0)
-
-    qvals = np.empty_like(q_sorted)
-    qvals[order] = q_sorted
-    rejected = qvals <= alpha
-    return {
-        "qvals": qvals,
-        "rejected": rejected,
-        "alpha": alpha,
-        "pi0": pi0,
-        "method": "Storey",
-    }
     p = np.asarray(pvals, dtype=float)
     m = p.size
     if lambdas is None:
