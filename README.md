@@ -9,7 +9,6 @@
     - **Sphericity**: Test if the covariance matrix is proportional to the identity matrix ($\Sigma = \lambda I$).
 - **Two-Sample Tests**:
     - **Equality**: Test if two covariance matrices are equal ($\Sigma_1 = \Sigma_2$).
-- **Multi-Sample Tests**:
     - **Proportionality**: Test if multiple covariance matrices are proportional to each other ($\Sigma_i = c_i \Sigma$).
 - **High-Dimensional Support**: Many tests are designed to work well even when the number of features ($p$) exceeds the number of samples ($n$).
 - **Scikit-Learn Compatible**: Designed to integrate smoothly with the scientific Python ecosystem.
