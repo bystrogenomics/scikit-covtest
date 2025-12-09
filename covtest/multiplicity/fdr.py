@@ -1,65 +1,41 @@
-"""False discovery rate (FDR) multiple testing corrections.
 
-This module implements procedures that control the false discovery rate (FDR),
-defined as the expected proportion of false rejections among all rejected null
-hypotheses, in multiple hypothesis testing problems.
+"""
+False Discovery Rate (FDR) control procedures.
 
-Functions
----------
-benjamini_hochberg
-    Classical Benjamini-Hochberg step-up procedure for FDR control under
-    independence or certain forms of positive dependence.
+This module implements standard and adaptive procedures for controlling
+the false discovery rate, defined as the expected proportion of false
+rejections among all rejections.
 
-benjamini_liu
-    Benjamini-Liu step-down procedure for FDR control under independence.
-
-benjamini_yekutieli
-    Benjamini-Yekutieli procedure for FDR control under arbitrary dependence
-    among test statistics, using a harmonic series correction factor.
-
-blaroq
-    Blanchard-Roquain step-up procedure for FDR control under arbitrary
-    dependence using a prior over hypotheses.
-
-weighted_bh
-    Weighted Benjamini-Hochberg procedure that incorporates prior weights
-    on hypotheses.
-
-storey_qvalues
-    Storey-Tibshirani q-value procedure that estimates the proportion of
-    true null hypotheses to obtain less conservative corrections.
-
-Notes
------
-These procedures provide less conservative alternatives to family-wise error
-rate (FWER) control methods by allowing a controlled fraction of false
-discoveries. Under suitable assumptions, they often yield higher power than
-FWER-based corrections such as Bonferroni or Holm.
-
-See Also
---------
-covtest.multiplicity.fwer
-    Family-wise error rate (FWER) control procedures.
+Implemented methods
+-------------------
+- Benjamini-Hochberg (1995)
+- Benjamini-Yekutieli (2001), robust under arbitrary dependence
+- Weighted BH (Genovese et al., 2006)
+- Storey-Tibshirani q-values (2003) with pi0 estimation
 
 References
 ----------
-.. [1] Benjamini, Y., and Hochberg, Y. (1995).
-       "Controlling the false discovery rate: a practical and powerful
-       approach to multiple testing."
-       Journal of the Royal Statistical Society: Series B, 57(1), 289-300.
-.. [2] Benjamini, Y., and Yekutieli, D. (2001).
-       "The control of the false discovery rate in multiple testing
-       under dependency."
-       Annals of Statistics, 29(4), 1165-1188.
-.. [3] Storey, J. D., and Tibshirani, R. (2003).
-       "Statistical significance for genomewide studies."
-       Proceedings of the National Academy of Sciences, 100(16), 9440-9445.
-.. [4] Genovese, C. R., Roeder, K., and Wasserman, L. (2006).
-       "False discovery control with p-value weighting."
-       Biometrika, 93(3), 509-524.
-.. [5] Blanchard, G., and Roquain, E. (2008).
-       "Two simple sufficient conditions for FDR control."
-       Electronic Journal of Statistics, 2, 963-992.
+- Benjamini, Y., and Hochberg, Y. (1995).
+  "Controlling the false discovery rate: a practical and powerful
+  approach to multiple testing."
+  Journal of the Royal Statistical Society: Series B, 57(1), 289-300.
+- Benjamini, Y., and Yekutieli, D. (2001).
+  "The control of the false discovery rate in multiple testing under
+  dependency."
+  Annals of Statistics, 29(4), 1165-1188.
+- Storey, J. D., and Tibshirani, R. (2003).
+  "Statistical significance for genomewide studies."
+  Proceedings of the National Academy of Sciences, 100(16), 9440-9445.
+- Genovese, C. R., Roeder, K., and Wasserman, L. (2006).
+  "False discovery control with p-value weighting."
+  Biometrika, 93(3), 509-524.
+
+Notes
+-----
+- Weighted BH requires nonnegative weights; a common choice is to
+  normalize weights so that they sum to the number of hypotheses.
+- Storey-type procedures estimate the proportion of true nulls (pi0)
+  adaptively to increase power.
 
 Examples
 --------
@@ -293,7 +269,7 @@ def benjamini_hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Benjamini, Y., & Hochberg, Y. (1995). Controlling the false
+    - [1] Benjamini, Y., & Hochberg, Y. (1995). Controlling the false
            discovery rate: a practical and powerful approach to multiple
            testing. Journal of the Royal Statistical Society: Series B
            (Methodological), 57(1), 289-300.
@@ -364,7 +340,7 @@ def benjamini_liu(pvalues, alpha=0.05, verbose=False):
     -----
     The Benjamini-Liu procedure uses critical values of the form:
 
-    .. math::
+    - math::
 
         c_i = 1 - (1 - \\min(1, m\\alpha/(m-i+1)))^{1/(m-i+1)}
 
@@ -375,7 +351,7 @@ def benjamini_liu(pvalues, alpha=0.05, verbose=False):
 
     References
     ----------
-    .. [1] Benjamini, Y., & Liu, W. (1999). A step-down multiple hypotheses
+    - [1] Benjamini, Y., & Liu, W. (1999). A step-down multiple hypotheses
            testing procedure that controls the false discovery rate under
            independence. Journal of Statistical Planning and Inference,
            82(1-2), 163-170.
@@ -499,7 +475,7 @@ def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
 
     References
     ----------
-    .. [1] Benjamini, Y., & Yekutieli, D. (2001). The control of the false
+    - [1] Benjamini, Y., & Yekutieli, D. (2001). The control of the false
            discovery rate in multiple testing under dependency. Annals of
            Statistics, 29(4), 1165-1188.
 
@@ -599,7 +575,7 @@ def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
     -----
     The procedure uses pre-critical values computed from the prior weights:
 
-    .. math::
+    - math::
 
         \\text{precritical}_i = \\sum_{j=1}^{i} \\frac{(j+1) \\pi_j}{m}
 
@@ -614,11 +590,11 @@ def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
 
     References
     ----------
-    .. [1] Blanchard, G., & Roquain, E. (2008). Two simple sufficient
+    - [1] Blanchard, G., & Roquain, E. (2008). Two simple sufficient
            conditions for FDR control. Electronic Journal of Statistics,
            2, 963-992.
 
-    .. [2] Sarkar, S. K. (2008). Generalizing Simes' test and Hochberg's
+    - [2] Sarkar, S. K. (2008). Generalizing Simes' test and Hochberg's
            stepup procedure. Annals of Statistics, 36(1), 337-363.
 
     Examples
@@ -755,7 +731,7 @@ def weighted_bh(
 
     References
     ----------
-    .. [1] Genovese, C. R., Roeder, K., & Wasserman, L. (2006). False
+    - [1] Genovese, C. R., Roeder, K., & Wasserman, L. (2006). False
            discovery control with p-value weighting. Biometrika, 93(3),
            509-524.
 
@@ -784,9 +760,9 @@ def weighted_bh(
 
     >>> # Error handling for invalid weights
     >>> try:
-    ...     weighted_bh(pvals, np.array([-1, 1, 1, 1, 1]))
-    ... except ValueError as e:
-    ...     print("Caught expected error:", str(e))
+    -.     weighted_bh(pvals, np.array([-1, 1, 1, 1, 1]))
+    -. except ValueError as e:
+    -.     print("Caught expected error:", str(e))
     Caught expected error: weights must be nonnegative and same length as pvals
     """
     p = np.asarray(pvals, dtype=float)
@@ -889,15 +865,15 @@ def storey_qvalues(
 
     References
     ----------
-    .. [1] Storey, J. D. (2002). A direct approach to false discovery rates.
+    - [1] Storey, J. D. (2002). A direct approach to false discovery rates.
            Journal of the Royal Statistical Society: Series B (Statistical
            Methodology), 64(3), 479-498.
 
-    .. [2] Storey, J. D., & Tibshirani, R. (2003). Statistical significance
+    - [2] Storey, J. D., & Tibshirani, R. (2003). Statistical significance
            for genomewide studies. Proceedings of the National Academy of
            Sciences, 100(16), 9440-9445.
 
-    .. [3] Benjamini, Y., & Hochberg, Y. (1995). Controlling the false
+    - [3] Benjamini, Y., & Hochberg, Y. (1995). Controlling the false
            discovery rate: a practical and powerful approach to multiple
            testing. Journal of the Royal Statistical Society: Series B
            (Methodological), 57(1), 289-300.
