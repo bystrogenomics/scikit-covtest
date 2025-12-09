@@ -9,3 +9,6 @@ matplotlib==3.10.3
 cvxpy==1.5.2
 statsmodels==0.14.2
 pytest==7.3.1
+Sphinx==8.2.3
+sphinx-rtd-theme==3.0.2
+docutils==0.21.2
