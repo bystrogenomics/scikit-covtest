@@ -484,12 +484,6 @@ def srivastava2011_single_sample(X, Sigma="identity"):
         - 'p_value' : float
             Two-sided p-value.
 
-    References
-    ----------
-    .. [1] Srivastava, M. S., & Yanagihara, H. (2011). "Testing
-           the equality of several covariance matrices with fewer
-           observations than the dimension." Journal of
-           Multivariate Analysis.
     """
     X = validate_data_matrix(X)
     p = X.shape[1]
