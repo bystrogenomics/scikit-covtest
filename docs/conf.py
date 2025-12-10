@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # Project information
 # -------------------------------------------------------------------
 project = "scikit-covtest"
-author = "Your Name"
+author = "Austin Talbot"
 
 # Try to get the version from the package if available
 try:
