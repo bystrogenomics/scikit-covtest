@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,25 +7,35 @@ name = "scikit-covtest"
 version = "0.1.0"
 description = "Covariance Hypothesis Testing and Evaluation"
 authors = [
-    { name="Austin Talbot", email="austin.talbot1993@gmail.com" }
+    { name = "Austin Talbot", email = "austin.talbot1993@gmail.com" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
-dependencies = [
-        'numba',
-        'numpy',
-        'pandas',
-        'scikit-learn',
-        'scipy',
-        'tqdm',
-        'cloudpickle',
-        'matplotlib',
-        'cvxpy',
-        'statsmodels',
-        'pytest',
-]
 requires-python = ">=3.8"
+
+dependencies = [
+    "numba",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "scipy",
+    "tqdm",
+    "cloudpickle",
+    "matplotlib",
+    "cvxpy",
+    "statsmodels",
+    "pytest",
+]
 
 [project.urls]
 Homepage = "https://github.com/bystrogenomics/scikit-covtest"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["covtest*"]
+
+[tool.setuptools.package-data]
+"covtest.datasets" = ["data/*.npz"]
 
