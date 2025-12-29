@@ -1,3 +1,5 @@
+![scikit-covtest logo](assets/scikit_covtest_logo_v8.png)
+
 # scikit-covtest: Covariance Matrix Hypothesis Testing Toolkit
 
 `scikit-covtest` is a Python package designed for hypothesis testing on covariance matrices. It provides a comprehensive suite of statistical tests for high-dimensional data, including one-sample tests (Identity, Sphericity), two-sample tests (Equality), and multi-sample tests (Proportionality).
