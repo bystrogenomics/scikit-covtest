@@ -38,9 +38,61 @@ from scipy.stats import norm
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
 from .utils import validate_data_matrix
+from . import _ahmad2015 as ahmad2015
 
 
-def _ahmad_2015_stat(x: np.ndarray) -> float:
+def ahmad2015_identity_nonormality(
+    X: np.ndarray, center: bool = True, sigma0: np.ndarray | None = None
+) -> dict:
+    """
+    Ahmad & von Rosen identity test.
+
+    Tests:
+      - if sigma0 is None:  H0: Sigma = I
+      - else:               H0: Sigma = sigma0 (by whitening)
+
+    Statistic:
+      T2 = (E3/p) - (2E1/p) + 1
+
+    Null calibration:
+      z = sqrt(n)*T2/2 ~ N(0,1) (asymptotic)
+    """
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2:
+        raise ValueError("X must be 2D (n, p).")
+    n, p = X.shape
+    if n < 3:
+        raise ValueError("Need n >= 3.")
+
+    if center:
+        X = ahmad2015._center_columns(X)
+
+    if sigma0 is not None:
+        sigma0 = np.asarray(sigma0, dtype=float)
+        if sigma0.shape != (p, p):
+            raise ValueError(f"sigma0 must have shape {(p, p)}.")
+        X = ahmad2015._whiten_by_sigma0(X, sigma0)
+
+    G = X @ X.T
+    diag = np.diag(G)
+    sum_diag = float(diag.sum())
+    sum_diag2 = float(np.dot(diag, diag))
+
+    E1 = sum_diag / n
+    fro2 = float(np.sum(G * G))
+    E3 = (fro2 - sum_diag2) / (n * (n - 1))
+
+    if not (np.isfinite(E1) and np.isfinite(E3)):
+        raise FloatingPointError("Non-finite E1/E3 encountered.")
+
+    T2 = (E3 / p) - (2.0 * E1 / p) + 1.0
+    z = (np.sqrt(n) * T2) / 2.0
+    pvalue = 2.0 * (1.0 - norm.cdf(abs(z)))
+
+    return {"stat": float(z), "pvalue": float(pvalue)}
+
+
+def _ahmad_2015_stat_old(x: np.ndarray) -> float:
     """
     x : (n, p) array, rows = observations, cols = variables.
         If testing against non-identity Sigma, whiten x before calling.
@@ -62,7 +114,7 @@ def _ahmad_2015_stat(x: np.ndarray) -> float:
     return nrow * (c3 / ncol - 2.0 * c1 / ncol + 1.0)
 
 
-def ahmad2015_identity(X, Sigma="identity"):
+def ahmad2015_identity_old(X, Sigma="identity"):
     """Ahmad & von Rosen (2015) test for identity covariance.
 
     Tests the null hypothesis that the covariance matrix equals a
@@ -392,7 +444,8 @@ def _fisher_2012_stat_(n, p, S_):
         + ((2 * (5 * n + 6)) / (n * (n**2 + n + 2)))
         * np.sum(np.diag(S_ @ S_))
         * (np.sum(np.diag(S_)) ** 2)
-        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2))) * (np.sum(np.diag(S_)) ** 4)
+        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2)))
+        * (np.sum(np.diag(S_)) ** 4)
     )
     return (n / np.sqrt(8 * (c**2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
 

@@ -10,38 +10,11 @@ from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
 from .utils import validate_data_matrix
 
-
-def ahmad_2015_two_sample(X, Y):
-    """Ahmad (2015) test for equality of covariance matrices.
-
-    Location-invariant test for homogeneity of high-dimensional
-    covariance matrices.
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples_1, n_features)
-        First sample data matrix.
-    Y : array-like of shape (n_samples_2, n_features)
-        Second sample data matrix.
-
-    Returns
-    -------
-    result : dict
-        Dictionary with keys:
-
-        - 'stat' : float
-            Test statistic.
-        - 'p_value' : float
-            P-value based on asymptotic normality.
-
-    References
-    ----------
-    .. [1] Ahmad, M. R. (2017). "A location-invariant test for
-           homogeneity of covariance matrices." Journal of
-           Multivariate Analysis.
+def ahmad_2017_two_sample(X, Y, two_sided=False):
     """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
+    Implements T2 under H0: Sigma1 = Sigma2 using Eq. (8) variance approximation.
+    Returns T2 = tau_hat / p^2 and z = T2 / (2*a_hat*(1/n1+1/n2)).
+    """
     n1, p = X.shape
     n2 = Y.shape[0]
 
@@ -49,22 +22,26 @@ def ahmad_2015_two_sample(X, Y):
     E2 = ahmad2017.estimate_Ei(Y)
     E12 = ahmad2017.estimate_E12(X, Y)
 
-    tau_hat = E1 + E2 - 2 * E12
-    a_hat = E12 / p**2
-    n0 = 1 / n1 + 1 / n2
+    tau_hat = E1 + E2 - 2.0 * E12
+    T2 = tau_hat / (p * p)
 
-    T2 = a_hat * tau_hat / (E12 if E12 != 0 else 1e-10)
+    a_hat = E12 / (p * p)
+    n0 = (1.0 / n1) + (1.0 / n2)
 
-    # Asymptotic variance under H0 (Eq. (8) in paper)
-    sigma2_T2 = 4 * a_hat**2 * n0**2
-    sigma_T2 = np.sqrt(sigma2_T2)
+    if a_hat <= 0:
+        # This can happen numerically (finite sample). You can choose to fail hard instead.
+        raise ValueError("a_hat <= 0; null variance estimate is not positive.")
 
-    z_score = T2 / sigma_T2
-    p_value = 1 - norm.cdf(z_score)  # upper tail
-    return {
-        "stat": T2,
-        "p_value": p_value,
-    }
+    sigma = 2.0 * a_hat * n0  # sqrt(4 a_hat^2 n0^2)
+    z = T2 / sigma
+
+    if two_sided:
+        pval = 2.0 * (1.0 - norm.cdf(abs(z)))
+    else:
+        pval = 1.0 - norm.cdf(z)
+
+    return {"stat": float(T2), "p_value": float(pval)}
+
 
 
 def boxm_test(X, Y, type="chi.squared"):

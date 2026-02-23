@@ -4,6 +4,58 @@ import scipy.stats as stats  # type: ignore
 from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
 from .utils import validate_data_matrix
+from . import _ahmad2015 as ahmad2015
+
+
+def ahmad2015_sphericity_nonormality(
+    X: np.ndarray, center: bool = True
+) -> dict:
+    """
+    Ahmad & von Rosen sphericity test.
+
+    Tests:
+      H0: Sigma = sigma^2 I
+
+    Statistic:
+      T1 = p*(E3/E2) - 1
+
+    Null calibration:
+      z = sqrt(n)*T1/2 ~ N(0,1) (asymptotic)
+    """
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2:
+        raise ValueError("X must be 2D (n, p).")
+    n, p = X.shape
+    if n < 3:
+        raise ValueError("Need n >= 3.")
+
+    if center:
+        X = ahmad2015._center_columns(X)
+
+    G = X @ X.T
+    diag = np.diag(G)
+    sum_diag = float(diag.sum())
+    sum_diag2 = float(np.dot(diag, diag))
+
+    E2 = ((sum_diag * sum_diag) - sum_diag2) / (n * (n - 1))
+    fro2 = float(np.sum(G * G))
+    E3 = (fro2 - sum_diag2) / (n * (n - 1))
+
+    if not (np.isfinite(E2) and np.isfinite(E3)):
+        raise FloatingPointError("Non-finite E2/E3 encountered.")
+    if E2 <= 0:
+        raise ValueError(
+            "E2 is non-positive; T1 is not reliable (degenerate data)."
+        )
+
+    T1 = p * (E3 / E2) - 1.0
+    z = (np.sqrt(n) * T1) / 2.0
+    pvalue = 2.0 * (1.0 - norm.cdf(abs(z)))
+
+    return {
+        "stat": float(z),
+        "pvalue": float(pvalue),
+    }
 
 
 def bartlett_sphericity_test(X):
