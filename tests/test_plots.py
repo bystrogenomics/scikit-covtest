@@ -44,6 +44,7 @@ def sample_pvals():
 def test_plot_functions_run_no_ax(sample_pvals, plot_func):
     """Ensure plotting functions run without error when ax=None."""
     plot_func(sample_pvals)  # should create its own fig/ax
+    plt.close("all")
 
 
 @pytest.mark.parametrize(
@@ -73,3 +74,4 @@ def test_plot_functions_with_ax(sample_pvals, plot_func):
 def test_plot_grid_runs(sample_pvals):
     """Ensure the combined grid runs without error."""
     plot_pvalue_diagnostics_grid(sample_pvals, n_bins=5)
+    plt.close("all")

@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from covtest.testing.timing import (
@@ -72,11 +73,13 @@ def test_plot_computation_dimension(tmp_path):
 
     # Test plotting without saving
     plot_computation_dimension(results)
+    plt.close("all")
 
     # Test plotting with saving
     save_path = tmp_path / "plot_dim.png"
     plot_computation_dimension(results, savename=str(save_path))
     assert save_path.exists()
+    plt.close("all")
 
 
 def test_plot_computation_sample_size(tmp_path):
@@ -87,8 +90,10 @@ def test_plot_computation_sample_size(tmp_path):
 
     # Test plotting without saving
     plot_computation_sample_size(results)
+    plt.close("all")
 
     # Test plotting with saving
     save_path = tmp_path / "plot_sample.png"
     plot_computation_sample_size(results, savename=str(save_path))
     assert save_path.exists()
+    plt.close("all")
