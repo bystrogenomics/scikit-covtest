@@ -6,6 +6,7 @@ from . import _srivastava_2005 as s2005
 from .utils import validate_data_matrix
 from . import _ahmad2015 as ahmad2015
 
+
 def ahmad2015_sphericity_test(
     X: np.ndarray,
     center: bool = True,
@@ -52,12 +53,14 @@ def ahmad2015_sphericity_test(
 
     T1 = (p * (E3 / E2)) - 1.0
 
-    z, used_cal = ahmad2015._standardize_T(T1, n=n, p=p, calibration=calibration)
+    z, used_cal = ahmad2015._standardize_T(
+        T1, n=n, p=p, calibration=calibration
+    )
 
     if tail == "upper":
-        pval = float(norm.sf(z))
+        pval = float(stats.norm.sf(z))
     elif tail == "two-sided":
-        pval = float(2.0 * norm.sf(abs(z)))
+        pval = float(2.0 * stats.norm.sf(abs(z)))
     else:
         raise ValueError("tail must be 'upper' or 'two-sided'.")
 
@@ -65,6 +68,7 @@ def ahmad2015_sphericity_test(
         "stat": float(T1),
         "p_value": pval,
     }
+
 
 def bartlett_sphericity_test(X):
     """Bartlett's test of sphericity.

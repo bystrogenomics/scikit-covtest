@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import norm
 
 
 def _trace_estimators_from_gram(G: np.ndarray):
@@ -51,7 +50,9 @@ def _standardize_T(T: float, n: int, p: int, calibration: str = "auto"):
     "auto": use "large_p_small_n" if p > n, else "ratio".
     """
     if calibration not in {"auto", "large_p_small_n", "ratio"}:
-        raise ValueError("calibration must be one of: auto, large_p_small_n, ratio")
+        raise ValueError(
+            "calibration must be one of: auto, large_p_small_n, ratio"
+        )
 
     if calibration == "auto":
         calibration = "large_p_small_n" if p > n else "ratio"
@@ -65,5 +66,3 @@ def _standardize_T(T: float, n: int, p: int, calibration: str = "auto"):
     var_nT = 4.0 * (1.0 + 2.0 / c)  # = 4*(2/c + 1)
     z = (n * T) / np.sqrt(var_nT)
     return z, calibration
-
-

@@ -41,7 +41,9 @@ def _theta_hat_matrix(Xc, S_hat):
     return theta
 
 
-def cai_liu_xia_2013_two_sample_test(X, Y, alpha=0.05, use_upper_triangle=True, eps=1e-12):
+def cai_liu_xia_2013_two_sample_test(
+    X, Y, alpha=0.05, use_upper_triangle=True, eps=1e-12
+):
     """
     Cai, Liu & Xia (2013) two-sample covariance test (max-type).
 
@@ -71,7 +73,9 @@ def cai_liu_xia_2013_two_sample_test(X, Y, alpha=0.05, use_upper_triangle=True, 
     n1, p = X.shape
     n2, p2 = Y.shape
     if p2 != p:
-        raise ValueError("X and Y must have the same number of features (columns).")
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
     if n1 < 2 or n2 < 2:
         raise ValueError("Need n1 >= 2 and n2 >= 2.")
 
@@ -92,7 +96,9 @@ def cai_liu_xia_2013_two_sample_test(X, Y, alpha=0.05, use_upper_triangle=True, 
     denom = np.maximum(denom, eps)
 
     diff = S1 - S2
-    M = (diff * diff) / denom  # M_ij (Eq. (2)) :contentReference[oaicite:12]{index=12}
+    M = (
+        diff * diff
+    ) / denom  # M_ij (Eq. (2)) :contentReference[oaicite:12]{index=12}
 
     if use_upper_triangle:
         iu = np.triu_indices(p)
@@ -124,4 +130,3 @@ def cai_liu_xia_2013_two_sample_test(X, Y, alpha=0.05, use_upper_triangle=True, 
         "n2": int(n2),
         "p": int(p),
     }
-

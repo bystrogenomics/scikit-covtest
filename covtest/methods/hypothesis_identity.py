@@ -4,15 +4,15 @@ hypothesis_identity.py
 
 Implementation of hypothesis tests for the identity covariance matrix.
 
-This module provides functions for two classical tests of whether 
-the covariance matrix of a multivariate distribution equals the 
+This module provides functions for two classical tests of whether
+the covariance matrix of a multivariate distribution equals the
 identity matrix:
 
 1. Ledoit–Wolf test (2002).
 2. Nagao’s test (1973).
 
-Both tests use statistics based on traces of the sample covariance 
-matrix. They are useful in high-dimensional hypothesis testing, 
+Both tests use statistics based on traces of the sample covariance
+matrix. They are useful in high-dimensional hypothesis testing,
 multivariate analysis, and as diagnostics for covariance estimation.
 
 References
@@ -32,13 +32,14 @@ https://doi.org/10.1214/aos/1176342506
 import numpy as np
 import numpy.linalg as la
 import scipy.stats as stats  # type: ignore
-from numpy.linalg import slogdet, solve, svd
+from numpy.linalg import slogdet
 from scipy.stats import norm
 
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
 from .utils import validate_data_matrix
 from . import _ahmad2015 as ahmad2015
+
 
 def test_identity_T2(
     X: np.ndarray,
@@ -72,7 +73,9 @@ def test_identity_T2(
 
     T2 = (E3 / p) - (2.0 * E1 / p) + 1.0
 
-    z, used_cal = ahmad2015._standardize_T(T2, n=n, p=p, calibration=calibration)
+    z, used_cal = ahmad2015._standardize_T(
+        T2, n=n, p=p, calibration=calibration
+    )
 
     if tail == "upper":
         pval = float(norm.sf(z))
@@ -85,6 +88,7 @@ def test_identity_T2(
         "stat": float(T2),
         "p_value": pval,
     }
+
 
 def _ledoit_wolf_stat(data):
     """Compute the Ledoit–Wolf test statistic.
@@ -365,8 +369,7 @@ def _fisher_2012_stat_(n, p, S_):
         + ((2 * (5 * n + 6)) / (n * (n**2 + n + 2)))
         * np.sum(np.diag(S_ @ S_))
         * (np.sum(np.diag(S_)) ** 2)
-        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2)))
-        * (np.sum(np.diag(S_)) ** 4)
+        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2))) * (np.sum(np.diag(S_)) ** 4)
     )
     return (n / np.sqrt(8 * (c**2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
 

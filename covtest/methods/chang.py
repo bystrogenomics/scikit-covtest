@@ -4,7 +4,9 @@ import numpy as np
 def _validate_matrix(X, name):
     X = np.asarray(X, dtype=float)
     if X.ndim != 2:
-        raise ValueError(f"{name} must be 2D with shape (n_samples, n_features).")
+        raise ValueError(
+            f"{name} must be 2D with shape (n_samples, n_features)."
+        )
     if not np.isfinite(X).all():
         raise ValueError(f"{name} contains NaN/Inf.")
     return X
@@ -81,7 +83,9 @@ def chang_2017_perturbation_max_test(
     n, p = X.shape
     m, p2 = Y.shape
     if p2 != p:
-        raise ValueError("X and Y must have the same number of features (columns).")
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
     if n < 2 or m < 2:
         raise ValueError("Need at least 2 samples per group.")
 
@@ -89,7 +93,9 @@ def chang_2017_perturbation_max_test(
     if isinstance(rng, (int, np.integer)) or rng is None:
         rng = np.random.default_rng(rng)
     elif not isinstance(rng, np.random.Generator):
-        raise ValueError("random_state must be None, an int seed, or a numpy.random.Generator.")
+        raise ValueError(
+            "random_state must be None, an int seed, or a numpy.random.Generator."
+        )
 
     # Center data
     Xc = _center(X)
@@ -163,6 +169,7 @@ if __name__ == "__main__":
     n, m, p = 40, 45, 80
     X = rng.normal(size=(n, p))
     Y = rng.normal(size=(m, p))
-    out = chang_2017_perturbation_max_test(X, Y, alpha=0.05, B=300, random_state=1)
+    out = chang_2017_perturbation_max_test(
+        X, Y, alpha=0.05, B=300, random_state=1
+    )
     print(out)
-

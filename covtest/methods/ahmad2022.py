@@ -5,7 +5,9 @@ from scipy.stats import norm
 def _validate_matrix(X):
     X = np.asarray(X, dtype=float)
     if X.ndim != 2:
-        raise ValueError("X must be a 2D array of shape (n_samples, n_features).")
+        raise ValueError(
+            "X must be a 2D array of shape (n_samples, n_features)."
+        )
     if not np.isfinite(X).all():
         raise ValueError("X contains NaN/Inf.")
     return X
@@ -67,7 +69,9 @@ def estimate_E12_trSigma1Sigma2(X1, X2):
     n1, p1 = X1.shape
     n2, p2 = X2.shape
     if p1 != p2:
-        raise ValueError("X1 and X2 must have the same number of features (columns).")
+        raise ValueError(
+            "X1 and X2 must have the same number of features (columns)."
+        )
     if n1 < 2 or n2 < 2:
         raise ValueError("Need n1 >= 2 and n2 >= 2 to form sample covariances.")
 
@@ -111,7 +115,9 @@ def ahmad_2022_proportionality_test(X1, X2, alternative="two-sided"):
     n1, p1 = X1.shape
     n2, p2 = X2.shape
     if p1 != p2:
-        raise ValueError("X1 and X2 must have the same number of features (columns).")
+        raise ValueError(
+            "X1 and X2 must have the same number of features (columns)."
+        )
 
     E1 = estimate_Ei_trSigma2(X1)
     E2 = estimate_Ei_trSigma2(X2)
@@ -133,8 +139,15 @@ def ahmad_2022_proportionality_test(X1, X2, alternative="two-sided"):
     elif alternative == "less":
         p_value = norm.cdf(z)
     else:
-        raise ValueError("alternative must be one of: 'two-sided', 'greater', 'less'.")
+        raise ValueError(
+            "alternative must be one of: 'two-sided', 'greater', 'less'."
+        )
 
-    return {"T_hat": float(T_hat), "z": float(z), "p_value": float(p_value),
-            "E1": float(E1), "E2": float(E2), "E12": float(E12)}
-
+    return {
+        "T_hat": float(T_hat),
+        "z": float(z),
+        "p_value": float(p_value),
+        "E1": float(E1),
+        "E2": float(E2),
+        "E12": float(E12),
+    }

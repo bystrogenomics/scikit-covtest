@@ -10,6 +10,7 @@ from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
 from .utils import validate_data_matrix
 
+
 def ahmad_2017_two_sample(X, Y, two_sided=False):
     """
     Implements T2 under H0: Sigma1 = Sigma2 using Eq. (8) variance approximation.
@@ -41,7 +42,6 @@ def ahmad_2017_two_sample(X, Y, two_sided=False):
         pval = 1.0 - norm.cdf(z)
 
     return {"stat": float(T2), "p_value": float(pval)}
-
 
 
 def boxm_test(X, Y, type="chi.squared"):

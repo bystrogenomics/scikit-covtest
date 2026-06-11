@@ -236,7 +236,9 @@ def check_array(
     else:
         desired_dtype = np.dtype(dtype)
 
-    array = _asarray_with_order(array, dtype=desired_dtype, order=order, copy=copy)
+    array = _asarray_with_order(
+        array, dtype=desired_dtype, order=order, copy=copy
+    )
 
     # Reject object dtype if numeric is requested but conversion failed
     if dtype == "numeric" and array.dtype.kind == "O":
