@@ -24,7 +24,7 @@ Identity covariance tests
    :toctree: generated/
    :template: function.rst
 
-   ahmad2015_identity
+   test_identity_T2
    ledoit_wolf_identity
    nagao_identity
    srivastava_2005_identity
@@ -45,6 +45,7 @@ Sphericity tests
    :toctree: generated/
    :template: function.rst
 
+   ahmad2015_sphericity_test
    bartlett_sphericity_test
    john_sphericity
    srivastava_2005_sphericity
@@ -73,6 +74,17 @@ Proportionality tests
    proportionality_plrt
    proportional_cov_test_tsukuda
 
+.. currentmodule:: covtest.methods.ahmad2022
+
+.. automodule:: covtest.methods.ahmad2022
+   :no-members:
+
+.. autosummary::
+   :toctree: generated/
+   :template: function.rst
+
+   ahmad_2022_proportionality_test
+
 
 Two-sample and multi-sample covariance tests
 --------------------------------------------
@@ -86,7 +98,7 @@ Two-sample and multi-sample covariance tests
    :toctree: generated/
    :template: function.rst
 
-   ahmad_2015_two_sample
+   ahmad_2017_two_sample
    boxm_test
    ishii_two_sample
    schott_2001
@@ -99,4 +111,71 @@ Two-sample and multi-sample covariance tests
    chang2016
    schott2007
    ding2023_two_sample
+
+.. currentmodule:: covtest.methods.cai
+
+.. automodule:: covtest.methods.cai
+   :no-members:
+
+.. autosummary::
+   :toctree: generated/
+   :template: function.rst
+
+   cai_liu_xia_2013_two_sample_test
+
+.. currentmodule:: covtest.methods.chang
+
+.. automodule:: covtest.methods.chang
+   :no-members:
+
+.. autosummary::
+   :toctree: generated/
+   :template: function.rst
+
+   chang_2017_perturbation_max_test
+
+
+Random Matrix Theory (RMT) covariance tests
+-------------------------------------------
+
+.. currentmodule:: covtest.methods.rmt4ds_cov_test
+
+.. automodule:: covtest.methods.rmt4ds_cov_test
+   :no-members:
+
+.. autosummary::
+   :toctree: generated/
+   :template: function.rst
+
+   one_sample_cov_test
+   two_sample_cov_test
+   multi_sample_cov_test
+
+
+Random Matrix Theory (RMT) distribution statistics
+--------------------------------------------------
+
+.. currentmodule:: covtest.methods.rmt_stat
+
+.. automodule:: covtest.methods.rmt_stat
+   :no-members:
+
+.. autosummary::
+   :toctree: generated/
+   :template: function.rst
+
+   dmp
+   pmp
+   qmp
+   dtw
+   ptw
+   qtw
+   d_wishart_max
+   p_wishart_max
+   q_wishart_max
+   d_wishart_spike
+   p_wishart_spike
+   q_wishart_spike
+   wishart_max_par
+   wishart_spike_par
 

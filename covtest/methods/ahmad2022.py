@@ -98,7 +98,7 @@ def ahmad_2022_proportionality_test(X1, X2, alternative="two-sided"):
     X1 : ndarray, shape (n1_samples, n_features)
     X2 : ndarray, shape (n2_samples, n_features)
     alternative : {"two-sided", "greater", "less"}
-        - "two-sided": p = 2 * (1 - Phi(|z|))
+        - "two-sided": p = 2 * (1 - Phi(abs(z)))
         - "greater":   p = 1 - Phi(z)
         - "less":      p = Phi(z)
 

@@ -306,7 +306,7 @@ def muirhead_sphericity_lrt(
 
     Statistic and calibration
     -------------------------
-    W = |S| / ( (tr(S)/p)^p )
+    W = det(S) / ( (tr(S)/p)^p )
     T = -(n - 1) * rho * log(W)  approx  chi2_df  under H0
 
     where:

@@ -48,7 +48,7 @@ Minimal example using a covariance identity test:
    rng = np.random.default_rng(0)
    X = rng.normal(size=(200, 50))
 
-   result = hi.ahmad2015_identity(X)
+   result = hi.test_identity_T2(X)
    print("Statistic: ", result['stat'])
    print("p-value: ", result['p_value'])
 

@@ -229,7 +229,7 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
         'v_Tn'       : asymptotic variance
         'Z'          : standardized statistic ~ N(0,1) under H0
         'pvalue_one_sided' : 1 - Phi(Z)
-        'pvalue_two_sided' : 2 * (1 - Phi(|Z|))
+        'pvalue_two_sided' : 2 * (1 - Phi(abs(Z)))
         'y1','y2','h','beta_x','beta_y'
     Notes
     -----
