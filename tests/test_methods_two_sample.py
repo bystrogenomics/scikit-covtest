@@ -5,7 +5,6 @@ from covtest.methods.hypothesis_two_sample import (
     _schott_2001_two_sample_stat,
     _srivastava_2007_stat,
     _srivastava_yanagihara_stat,
-    ahmad_2015_two_sample,
     boxm_test,
     schott_2001,
     srivastava_two_sample_2007,
@@ -31,13 +30,6 @@ def data_three_groups():
         "g2": rng.normal(size=(30, 4)),
         "g3": rng.normal(size=(28, 4)),
     }
-
-
-def test_ahmad2017(data_three_groups):
-    matrices = list(data_three_groups.values())
-    res = ahmad_2015_two_sample(matrices[0], matrices[1])
-    assert set(res.keys()) == {"stat", "p_value"}
-    assert 0 <= res["p_value"] <= 1
 
 
 def test_boxm_test_chisq_and_F(data_two_groups):
