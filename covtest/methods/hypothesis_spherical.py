@@ -6,57 +6,65 @@ from . import _srivastava_2005 as s2005
 from .utils import validate_data_matrix
 from . import _ahmad2015 as ahmad2015
 
-
-def ahmad2015_sphericity_nonormality(
-    X: np.ndarray, center: bool = True
-) -> dict:
+def ahmad2015_sphericity_test(
+    X: np.ndarray,
+    center: bool = True,
+    calibration: str = "auto",
+    tail: str = "upper",
+):
     """
-    Ahmad & von Rosen sphericity test.
+    Test H0: Sigma = sigma^2 I (sphericity) using T1 = p*E3/E2 - 1.
 
-    Tests:
-      H0: Sigma = sigma^2 I
+    Parameters
+    ----------
+    X : array (n, p)
+        Rows are samples, columns are variables.
+    center : bool
+        If True, subtract column means before testing (recommended if mean is not known to be 0).
+    calibration : {"auto", "large_p_small_n", "ratio"}
+        See _standardize_T.
+    tail : {"upper", "two-sided"}
+        Population deviation measure is >= 0, so "upper" is the usual choice.
+        "two-sided" is available if you want a symmetric normal p-value.
 
-    Statistic:
-      T1 = p*(E3/E2) - 1
-
-    Null calibration:
-      z = sqrt(n)*T1/2 ~ N(0,1) (asymptotic)
+    Returns
+    -------
+    dict with keys: T1, z, pvalue, calibration, n, p, E1, E2, E3
     """
-    X = np.asarray(X, dtype=float)
+    X = np.asarray(X, dtype=np.float64)
     if X.ndim != 2:
-        raise ValueError("X must be 2D (n, p).")
+        raise ValueError("X must be a 2D array of shape (n, p).")
     n, p = X.shape
-    if n < 3:
-        raise ValueError("Need n >= 3.")
+    if n < 2:
+        raise ValueError("Need n >= 2 samples.")
+    if p < 1:
+        raise ValueError("Need p >= 1 variables.")
 
     if center:
-        X = ahmad2015._center_columns(X)
+        X = X - X.mean(axis=0, keepdims=True)
 
+    # Gram matrix (n x n)
     G = X @ X.T
-    diag = np.diag(G)
-    sum_diag = float(diag.sum())
-    sum_diag2 = float(np.dot(diag, diag))
 
-    E2 = ((sum_diag * sum_diag) - sum_diag2) / (n * (n - 1))
-    fro2 = float(np.sum(G * G))
-    E3 = (fro2 - sum_diag2) / (n * (n - 1))
-
-    if not (np.isfinite(E2) and np.isfinite(E3)):
-        raise FloatingPointError("Non-finite E2/E3 encountered.")
+    E1, E2, E3 = ahmad2015._trace_estimators_from_gram(G)
     if E2 <= 0:
-        raise ValueError(
-            "E2 is non-positive; T1 is not reliable (degenerate data)."
-        )
+        raise ValueError(f"E2 must be positive to form T1; got E2={E2}.")
 
-    T1 = p * (E3 / E2) - 1.0
-    z = (np.sqrt(n) * T1) / 2.0
-    pvalue = 2.0 * (1.0 - norm.cdf(abs(z)))
+    T1 = (p * (E3 / E2)) - 1.0
+
+    z, used_cal = ahmad2015._standardize_T(T1, n=n, p=p, calibration=calibration)
+
+    if tail == "upper":
+        pval = float(norm.sf(z))
+    elif tail == "two-sided":
+        pval = float(2.0 * norm.sf(abs(z)))
+    else:
+        raise ValueError("tail must be 'upper' or 'two-sided'.")
 
     return {
-        "stat": float(z),
-        "pvalue": float(pvalue),
+        "stat": float(T1),
+        "p_value": pval,
     }
-
 
 def bartlett_sphericity_test(X):
     """Bartlett's test of sphericity.
