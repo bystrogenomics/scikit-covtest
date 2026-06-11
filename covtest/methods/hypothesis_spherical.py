@@ -4,6 +4,70 @@ import scipy.stats as stats  # type: ignore
 from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
 from .utils import validate_data_matrix
+from . import _ahmad2015 as ahmad2015
+
+
+def ahmad2015_sphericity_test(
+    X: np.ndarray,
+    center: bool = True,
+    calibration: str = "auto",
+    tail: str = "upper",
+):
+    """
+    Test H0: Sigma = sigma^2 I (sphericity) using T1 = p*E3/E2 - 1.
+
+    Parameters
+    ----------
+    X : array (n, p)
+        Rows are samples, columns are variables.
+    center : bool
+        If True, subtract column means before testing (recommended if mean is not known to be 0).
+    calibration : {"auto", "large_p_small_n", "ratio"}
+        See _standardize_T.
+    tail : {"upper", "two-sided"}
+        Population deviation measure is >= 0, so "upper" is the usual choice.
+        "two-sided" is available if you want a symmetric normal p-value.
+
+    Returns
+    -------
+    dict with keys: T1, z, pvalue, calibration, n, p, E1, E2, E3
+    """
+    X = np.asarray(X, dtype=np.float64)
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array of shape (n, p).")
+    n, p = X.shape
+    if n < 2:
+        raise ValueError("Need n >= 2 samples.")
+    if p < 1:
+        raise ValueError("Need p >= 1 variables.")
+
+    if center:
+        X = X - X.mean(axis=0, keepdims=True)
+
+    # Gram matrix (n x n)
+    G = X @ X.T
+
+    E1, E2, E3 = ahmad2015._trace_estimators_from_gram(G)
+    if E2 <= 0:
+        raise ValueError(f"E2 must be positive to form T1; got E2={E2}.")
+
+    T1 = (p * (E3 / E2)) - 1.0
+
+    z, used_cal = ahmad2015._standardize_T(
+        T1, n=n, p=p, calibration=calibration
+    )
+
+    if tail == "upper":
+        pval = float(stats.norm.sf(z))
+    elif tail == "two-sided":
+        pval = float(2.0 * stats.norm.sf(abs(z)))
+    else:
+        raise ValueError("tail must be 'upper' or 'two-sided'.")
+
+    return {
+        "stat": float(T1),
+        "p_value": pval,
+    }
 
 
 def bartlett_sphericity_test(X):

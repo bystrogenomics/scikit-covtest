@@ -4,15 +4,15 @@ hypothesis_identity.py
 
 Implementation of hypothesis tests for the identity covariance matrix.
 
-This module provides functions for two classical tests of whether 
-the covariance matrix of a multivariate distribution equals the 
+This module provides functions for two classical tests of whether
+the covariance matrix of a multivariate distribution equals the
 identity matrix:
 
 1. Ledoit–Wolf test (2002).
 2. Nagao’s test (1973).
 
-Both tests use statistics based on traces of the sample covariance 
-matrix. They are useful in high-dimensional hypothesis testing, 
+Both tests use statistics based on traces of the sample covariance
+matrix. They are useful in high-dimensional hypothesis testing,
 multivariate analysis, and as diagnostics for covariance estimation.
 
 References
@@ -32,85 +32,62 @@ https://doi.org/10.1214/aos/1176342506
 import numpy as np
 import numpy.linalg as la
 import scipy.stats as stats  # type: ignore
-from numpy.linalg import slogdet, solve, svd
+from numpy.linalg import slogdet
 from scipy.stats import norm
 
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
 from .utils import validate_data_matrix
+from . import _ahmad2015 as ahmad2015
 
 
-def _ahmad_2015_stat(x: np.ndarray) -> float:
+def test_identity_T2(
+    X: np.ndarray,
+    center: bool = True,
+    calibration: str = "auto",
+    tail: str = "upper",
+):
     """
-    x : (n, p) array, rows = observations, cols = variables.
-        If testing against non-identity Sigma, whiten x before calling.
+    Test H0: Sigma = I (identity) using T2 = (1/p)*E3 - (2/p)*E1 + 1.
+
+    Parameters are analogous to test_sphericity_T1.
+
+    Note: For a general null Sigma = Sigma0, you typically whiten first:
+          X_whitened = X @ Sigma0^{-1/2}  (or apply a linear transform with that effect)
+          then run test_identity_T2 on X_whitened.
     """
-    x = np.asarray(x, dtype=float)
-    nrow, ncol = x.shape
-
-    G = x @ x.T
-    diagG = np.diag(G)
-
-    c1 = diagG.mean()
-
-    total_sq = np.sum(G**2)
-    diag_sq = np.sum(diagG**2)
-    off_diag_sq = total_sq - diag_sq
-
-    c3 = off_diag_sq / (nrow * (nrow - 1))
-
-    return nrow * (c3 / ncol - 2.0 * c1 / ncol + 1.0)
-
-
-def ahmad2015_identity(X, Sigma="identity"):
-    """Ahmad & von Rosen (2015) test for identity covariance.
-
-    Tests the null hypothesis that the covariance matrix equals a
-    specified matrix (default: identity matrix).
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples, n_features)
-        Data matrix where rows are samples and columns are features.
-    Sigma : {"identity", array-like}, default="identity"
-        The hypothesized covariance matrix. If "identity", tests
-        against the identity matrix.
-
-    Returns
-    -------
-    result : dict
-        Dictionary with keys:
-
-        - 'stat' : float
-            Test statistic value.
-        - 'p_value' : float
-            Two-sided p-value.
-
-    References
-    ----------
-    .. [1] Ahmad, M. R., & von Rosen, D. (2015). "Tests for
-           covariance matrices in high dimension with less sample
-           size." Journal of Multivariate Analysis, 130, 37-51.
-    """
-    X = validate_data_matrix(X)
+    X = np.asarray(X, dtype=np.float64)
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array of shape (n, p).")
     n, p = X.shape
+    if n < 2:
+        raise ValueError("Need n >= 2 samples.")
+    if p < 1:
+        raise ValueError("Need p >= 1 variables.")
 
-    if Sigma == "identity":
-        X_ = X
-    else:
-        u_s, d_s, _ = svd(Sigma)
-        X_ = X @ solve(u_s @ np.diag(np.sqrt(d_s)), np.eye(p))
+    if center:
+        X = X - X.mean(axis=0, keepdims=True)
 
-    statistic = _ahmad_2015_stat(X_)
-    parameter = {"Mean": 0, "Variance": 4 * (2 / (p / n + 1))}
-    pval = 2 * (
-        1
-        - stats.norm.cdf(
-            np.abs(statistic), loc=0, scale=np.sqrt(parameter["Variance"])
-        )
+    G = X @ X.T
+    E1, E2, E3 = ahmad2015._trace_estimators_from_gram(G)
+
+    T2 = (E3 / p) - (2.0 * E1 / p) + 1.0
+
+    z, used_cal = ahmad2015._standardize_T(
+        T2, n=n, p=p, calibration=calibration
     )
 
-    return {"stat": statistic, "p_value": pval}
+    if tail == "upper":
+        pval = float(norm.sf(z))
+    elif tail == "two-sided":
+        pval = float(2.0 * norm.sf(abs(z)))
+    else:
+        raise ValueError("tail must be 'upper' or 'two-sided'.")
+
+    return {
+        "stat": float(T2),
+        "p_value": pval,
+    }
 
 
 def _ledoit_wolf_stat(data):

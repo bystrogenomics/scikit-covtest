@@ -2,12 +2,10 @@ import numpy as np
 import pytest
 
 from covtest.methods.hypothesis_identity import (
-    _ahmad_2015_stat,
     _fisher_2012_stat_,
     _ledoit_wolf_stat,
     _nagao_stat,
     _srivastava2011_,
-    ahmad2015_identity,
     fisher_single_sample,
     ledoit_wolf_identity,
     nagao_identity,
@@ -28,18 +26,6 @@ def non_identity_data():
     rng = np.random.default_rng(123)
     X = rng.normal(size=(50, 5))
     return X @ np.diag([1, 2, 3, 4, 5])
-
-
-def test_ahmad_stat_identity(identity_data):
-    stat = _ahmad_2015_stat(identity_data)
-    assert isinstance(stat, float)
-
-
-def test_ahmad_identity_returns_dict(identity_data):
-    res = ahmad2015_identity(identity_data)
-    assert "stat" in res and "p_value" in res
-    assert isinstance(res["p_value"], float)
-    assert 0 <= res["p_value"] <= 1
 
 
 def test_ledoit_wolf_stat(identity_data):
