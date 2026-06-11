@@ -3,8 +3,13 @@ import scipy.stats as stats  # type: ignore
 
 from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
-from .utils import validate_data_matrix
 from . import _ahmad2015 as ahmad2015
+from .utils import (
+    covariance_traces,
+    result_dict,
+    sample_covariance,
+    validate_data_matrix,
+)
 
 
 def ahmad2015_sphericity_test(
@@ -64,10 +69,7 @@ def ahmad2015_sphericity_test(
     else:
         raise ValueError("tail must be 'upper' or 'two-sided'.")
 
-    return {
-        "stat": float(T1),
-        "p_value": pval,
-    }
+    return result_dict(float(T1), pval)
 
 
 def bartlett_sphericity_test(X):
@@ -117,7 +119,7 @@ def bartlett_sphericity_test(X):
     # p-value
     p_value = stats.chi2.sf(stat, dof)
 
-    return {"stat": stat, "p_value": p_value}
+    return result_dict(stat, p_value)
 
 
 def _john_stat(data):
@@ -147,10 +149,8 @@ def _john_stat(data):
     where :math:`S` is the sample covariance matrix and :math:`p` is
     the number of features.
     """
-    n, p = data.shape
-    sample_cov_matrix = np.cov(data, rowvar=False)
-    trace_S = np.trace(sample_cov_matrix)
-    trace_S2 = np.trace(np.dot(sample_cov_matrix, sample_cov_matrix))
+    _, trace_S, trace_S2 = covariance_traces(data)
+    p = data.shape[1]
     U = (1 / p) * trace_S2 / ((1 / p) * trace_S) ** 2 - 1
     return U
 
@@ -193,8 +193,7 @@ def john_sphericity(X):
     degree_of_freedom = p * (p + 1) / 2 - 1
     stat = U * n * p / 2
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
-    results = {"stat": stat, "p_value": p_value}
-    return results
+    return result_dict(stat, p_value)
 
 
 # Checked
@@ -226,12 +225,11 @@ def srivastava_2005_sphericity(X):
     """
     X = validate_data_matrix(X)
     n = X.shape[0]
-    S = np.cov(X.T)
+    S = sample_covariance(X)
     T_1 = s2005.T_1_stat(S, n)
     z_stat = (n / 2) * T_1
     p_value = 1 - stats.norm.cdf(z_stat)
-    results = {"stat": z_stat, "p_value": p_value}
-    return results
+    return result_dict(z_stat, p_value)
 
 
 def _spatial_sign_rows(A):
@@ -293,7 +291,7 @@ def sk_test(X):
     z = Q / np.sqrt(sigma2)
     pval = 1.0 - stats.norm.cdf(z)  # right-tail, as in the paper
 
-    return {"stat": Q, "p_value": pval}
+    return result_dict(Q, pval)
 
 
 def muirhead_sphericity_lrt(
@@ -391,10 +389,7 @@ def muirhead_sphericity_lrt(
     T = -(n - 1.0) * rho * logW
     pval = stats.chi2.sf(T, df)
 
-    return {
-        "stat": T,
-        "p_value": float(pval),
-    }
+    return result_dict(T, float(pval))
 
 
 def czz_sphericity_test(X, center=False):
@@ -488,7 +483,7 @@ def czz_sphericity_test(X, center=False):
     Z = (n * U) / 2.0
     p_norm = float(1.0 - stats.norm.cdf(Z))  # right-tailed
 
-    return {"stat": float(Z), "p_value": p_norm}
+    return result_dict(float(Z), p_norm)
 
 
 def hallin_rank_sphericity_test(X, method="wilcoxon"):
@@ -496,33 +491,26 @@ def hallin_rank_sphericity_test(X, method="wilcoxon"):
     Van der Waerden (normal-score) rank-based test for sphericity.
     """
     X = validate_data_matrix(X)
+    if method not in {"wilcoxon", "vdw"}:
+        raise ValueError("Unrecognized method %s" % method)
+
+    n, k = X.shape
+    U, d = hallin2006._center_and_scale(X)
+    ranks = stats.rankdata(d, method="average")
+    u = ranks / (n + 1)
+
     if method == "wilcoxon":
-        n, k = X.shape
-        U, d = hallin2006._center_and_scale(X)
-        ranks = stats.rankdata(d, method="average")
-        u = ranks / (n + 1)
         scores = u - 0.5
         score_var = 1 / 12
-
-        Q = hallin2006._compute_statistic(U, scores, k, score_var)
-        df = k * (k + 1) // 2 - 1
-        pval = 1 - stats.chi2.cdf(Q, df)
-    elif method == "vdw":
-        n, k = X.shape
-        U, d = hallin2006._center_and_scale(X)
-        ranks = stats.rankdata(d, method="average")
-        u = ranks / (n + 1)
+    else:
         u = np.clip(u, 1e-6, 1 - 1e-6)
 
         raw_scores = stats.chi.ppf(u, df=k)
         scores = raw_scores - np.mean(raw_scores)
-
         score_var = np.var(raw_scores, ddof=0)
 
-        Q = hallin2006._compute_statistic(U, scores, k, score_var)
-        df = k * (k + 1) // 2 - 1
-        pval = 1 - stats.chi2.cdf(Q, df)
-    else:
-        raise ValueError("Unrecognized method %s" % method)
+    Q = hallin2006._compute_statistic(U, scores, k, score_var)
+    df = k * (k + 1) // 2 - 1
+    pval = 1 - stats.chi2.cdf(Q, df)
 
-    return {"stat": Q, "p_value": pval}
+    return result_dict(Q, pval)

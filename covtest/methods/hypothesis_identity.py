@@ -37,8 +37,13 @@ from scipy.stats import norm
 
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
-from .utils import validate_data_matrix
 from . import _ahmad2015 as ahmad2015
+from .utils import (
+    covariance_traces,
+    result_dict,
+    sample_covariance,
+    validate_data_matrix,
+)
 
 
 def test_identity_T2(
@@ -123,11 +128,9 @@ def _ledoit_wolf_stat(data):
     for :math:`H_0 : \\Sigma = I_p`.
     """
     n, p = data.shape
-    sample_cov_matrix = np.cov(data, rowvar=False)
-    trace_S = np.trace(sample_cov_matrix)
+    sample_cov_matrix, trace_S, _ = covariance_traces(data)
     SmI = sample_cov_matrix - np.eye(p)
-    trace_smi2 = np.trace(np.dot(SmI, SmI))
-    trace_S = np.trace(sample_cov_matrix)
+    trace_smi2 = np.trace(SmI @ SmI)
     W = 1 / p * trace_smi2 - 1 / (n * p) * trace_S**2 + p / n
     return W
 
@@ -167,8 +170,7 @@ def ledoit_wolf_identity(X):
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * W
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
-    results = {"stat": stat, "p_value": p_value}
-    return results
+    return result_dict(stat, p_value)
 
 
 def _nagao_stat(data):
@@ -198,10 +200,8 @@ def _nagao_stat(data):
     The statistic :math:`V` is used to form Nagao’s test
     for :math:`H_0 : \\Sigma = I_p`.
     """
-    n, p = data.shape
-    sample_cov_matrix = np.cov(data, rowvar=False)
-    trace_S = np.trace(sample_cov_matrix)
-    trace_S2 = np.trace(np.dot(sample_cov_matrix, sample_cov_matrix))
+    _, trace_S, trace_S2 = covariance_traces(data)
+    p = data.shape[1]
     V = 1 / p * trace_S2 - 2 / p * trace_S + 1
     return V
 
@@ -243,8 +243,7 @@ def nagao_identity(X):
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * V
     p_value = 1 - stats.chi2.cdf(stat, degree_of_freedom)
-    results = {"stat": stat, "p_value": p_value}
-    return results
+    return result_dict(stat, p_value)
 
 
 # Checked
@@ -276,12 +275,11 @@ def srivastava_2005_identity(X):
     """
     X = validate_data_matrix(X)
     n = X.shape[0]
-    S = np.cov(X.T)
+    S = sample_covariance(X)
     T_1 = s2005.T_1_stat(S, n)
     z_stat = (n / 2) * T_1
     p_value = 1 - stats.norm.cdf(z_stat)
-    results = {"stat": z_stat, "p_value": p_value}
-    return results
+    return result_dict(z_stat, p_value)
 
 
 def tyler_identity(X, unknown_mean=False, method="tr"):
@@ -348,9 +346,19 @@ def tyler_identity(X, unknown_mean=False, method="tr"):
     z_tr = (T_tr - mean_tr) / np.sqrt(var_tr)
     z_log = (T_log - mean_log) / np.sqrt(var_log)
     if method == "tr":
-        return {"stat": z_tr, "p_value": 1 - stats.norm.cdf(z_tr)}
-    else:
-        return {"stat": z_log, "p_value": 1 - stats.norm.cdf(z_log)}
+        return result_dict(z_tr, 1 - stats.norm.cdf(z_tr))
+    return result_dict(z_log, 1 - stats.norm.cdf(z_log))
+
+
+def _covariance_under_null(S, Sigma):
+    if isinstance(Sigma, str) and Sigma == "identity":
+        return S
+
+    sv = la.svd(Sigma)
+    svDf = la.svd(S)
+    sqrt_sv = np.diag(np.sqrt(sv[1]))
+    x_ = svDf[0] @ sqrt_sv @ la.inv(sv[0] @ sqrt_sv)
+    return x_.T @ x_
 
 
 def _fisher_2012_stat_(n, p, S_):
@@ -406,27 +414,13 @@ def fisher_single_sample(X, Sigma="identity"):
     X = validate_data_matrix(X)
     p = X.shape[1]
     n = X.shape[0]
-    S = np.cov(X, rowvar=False)
-
-    if Sigma == "identity":
-        S_ = S
-    else:
-        sv = la.svd(Sigma)
-        svDf = la.svd(S)
-        x_ = (
-            svDf[0]
-            @ np.diag(np.sqrt(sv[1]))
-            @ la.inv(sv[0] @ np.diag(np.sqrt(sv[1])))
-        )
-        S_ = x_.T @ x_
+    S = sample_covariance(X)
+    S_ = _covariance_under_null(S, Sigma)
 
     statistic = _fisher_2012_stat_(n - 1, p, S_)
     p_value = 2 * (1 - norm.cdf(abs(statistic)))
 
-    return {
-        "stat": statistic,
-        "p_value": p_value,
-    }
+    return result_dict(statistic, p_value)
 
 
 def _srivastava2011_(n, p, S_):
@@ -465,25 +459,10 @@ def srivastava2011_single_sample(X, Sigma="identity"):
     X = validate_data_matrix(X)
     p = X.shape[1]
     n = X.shape[0]
-    S = np.cov(X, rowvar=False)
-
-    if Sigma == "identity":
-        S_ = S
-    else:
-        sv = np.linalg.svd(Sigma)
-        svDf = np.linalg.svd(S)
-        x_ = (
-            svDf[0]
-            @ np.diag(np.sqrt(sv[1]))
-            @ np.linalg.inv(sv[0] @ np.diag(np.sqrt(sv[1])))
-        )
-        S_ = x_.T @ x_
+    S = sample_covariance(X)
+    S_ = _covariance_under_null(S, Sigma)
 
     statistic = _srivastava2011_(n - 1, p, S_)
     p_value = 2 * (1 - norm.cdf(abs(statistic)))
 
-    results = {
-        "stat": statistic,
-        "p_value": p_value,
-    }
-    return results
+    return result_dict(statistic, p_value)

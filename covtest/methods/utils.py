@@ -321,3 +321,32 @@ def validate_data_matrix(X):
         force_all_finite=True,
         dtype="numeric",
     )
+
+
+def validate_matching_data_matrices(
+    X, Y, mismatch_message="X and Y must have the same number of columns."
+):
+    """Validate two data matrices and require matching feature dimensions."""
+    X = validate_data_matrix(X)
+    Y = validate_data_matrix(Y)
+    if X.shape[1] != Y.shape[1]:
+        raise ValueError(mismatch_message)
+    return X, Y
+
+
+def sample_covariance(X, *, bias=False):
+    """Return a row-observation covariance matrix."""
+    return np.cov(X, rowvar=False, bias=bias)
+
+
+def covariance_traces(X, *, bias=False):
+    """Return sample covariance, trace(S), and trace(S @ S)."""
+    S = sample_covariance(X, bias=bias)
+    trace_S = np.trace(S)
+    trace_S2 = np.trace(S @ S)
+    return S, trace_S, trace_S2
+
+
+def result_dict(stat, p_value):
+    """Standard test result payload used across public test functions."""
+    return {"stat": stat, "p_value": p_value}
