@@ -8,7 +8,12 @@ from . import _ahmad2017 as ahmad2017
 from . import _ding as ding2023
 from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
-from .utils import validate_data_matrix
+from .utils import (
+    result_dict,
+    sample_covariance,
+    validate_data_matrix,
+    validate_matching_data_matrices,
+)
 
 
 def ahmad_2017_two_sample(X, Y, two_sided=False):
@@ -41,7 +46,7 @@ def ahmad_2017_two_sample(X, Y, two_sided=False):
     else:
         pval = 1.0 - norm.cdf(z)
 
-    return {"stat": float(T2), "p_value": float(pval)}
+    return result_dict(float(T2), float(pval))
 
 
 def boxm_test(X, Y, type="chi.squared"):
@@ -130,11 +135,9 @@ def boxm_test(X, Y, type="chi.squared"):
     >>> res_alt["p_value"] < 0.05
     True
     """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-
-    if X.shape[1] != Y.shape[1]:
-        raise ValueError("Dimensions do not match")
+    X, Y = validate_matching_data_matrices(
+        X, Y, mismatch_message="Dimensions do not match"
+    )
     if X.shape[1] >= X.shape[0] or Y.shape[1] >= Y.shape[0]:
         raise ValueError("This is not a high dimensional test")
 
@@ -142,8 +145,8 @@ def boxm_test(X, Y, type="chi.squared"):
     m = Y.shape[0]
 
     # Sample covariance matrices
-    s1 = np.cov(X, rowvar=False, bias=False)
-    s2 = np.cov(Y, rowvar=False, bias=False)
+    s1 = sample_covariance(X, bias=False)
+    s2 = sample_covariance(Y, bias=False)
 
     # Pooled covariance
     s_pooled = ((n - 1) * s1 + (m - 1) * s2) / (n + m - 2)
@@ -155,21 +158,16 @@ def boxm_test(X, Y, type="chi.squared"):
         - (n + m - 2) * np.log(la.det(s_pooled))
     ) / 2.0
 
+    c1 = (
+        (1 / (n - 1) + 1 / (m - 1) - 1 / (n + m - 2))
+        * (2 * p**2 + 3 * p - 1)
+        / (6 * (p + 1))
+    )
     if type == "chi.squared":
-        c1 = (
-            (1 / (n - 1) + 1 / (m - 1) - 1 / (n + m - 2))
-            * (2 * p**2 + 3 * p - 1)
-            / (6 * (p + 1))
-        )
         test_statistic = -2 * (1 - c1) * log_M
         df = p * (p + 1) / 2
         p_value = chi2.sf(test_statistic, df=df)
     elif type == "F":
-        c1 = (
-            (1 / (n - 1) + 1 / (m - 1) - 1 / (n + m - 2))
-            * (2 * p**2 + 3 * p - 1)
-            / (6 * (p + 1))
-        )
         c2 = (
             (p - 1)
             * (p + 2)
@@ -190,7 +188,7 @@ def boxm_test(X, Y, type="chi.squared"):
     else:
         raise ValueError("type must be either 'chi.squared' or 'F'")
 
-    return {"stat": test_statistic, "p_value": p_value}
+    return result_dict(test_statistic, p_value)
 
 
 def ishii_two_sample(X1, X2, test="full"):
@@ -226,29 +224,13 @@ def ishii_two_sample(X1, X2, test="full"):
     lambda1 = l1[0]
     lambda2 = l2[0]
 
-    kappa1 = (
-        np.trace(
-            (X1 - X1.mean(1, keepdims=True)).T
-            @ (X1 - X1.mean(1, keepdims=True))
-            / nu1
-        )
-        - lambda1
-    )
-    kappa2 = (
-        np.trace(
-            (X2 - X2.mean(1, keepdims=True)).T
-            @ (X2 - X2.mean(1, keepdims=True))
-            / nu2
-        )
-        - lambda2
-    )
+    X1_centered = X1 - X1.mean(1, keepdims=True)
+    X2_centered = X2 - X2.mean(1, keepdims=True)
+    kappa1 = np.trace(X1_centered.T @ X1_centered / nu1) - lambda1
+    kappa2 = np.trace(X2_centered.T @ X2_centered / nu2) - lambda2
     gamma_hat = max(kappa1 / kappa2, kappa2 / kappa1)
     h_dot = np.abs(h1[:, 0] @ h2[:, 0])
-    h_star = (
-        (h_dot + 1 / h_dot) / 2
-        if lambda1 >= lambda2
-        else (h_dot + 1 / h_dot) / 2
-    )
+    h_star = (h_dot + 1 / h_dot) / 2
 
     F1 = lambda1 / lambda2
     F2 = F1 * (h_star if lambda1 >= lambda2 else 1 / h_star)
@@ -266,7 +248,7 @@ def ishii_two_sample(X1, X2, test="full"):
     else:
         raise ValueError("Unrecognized option %s" % test)
 
-    return {"stat": stat, "p_value": p_value}
+    return result_dict(stat, p_value)
 
 
 def _schott_2001_two_sample_stat(matrix_list):
@@ -279,7 +261,7 @@ def _schott_2001_two_sample_stat(matrix_list):
 
     for mats in matrix_list:
         ni = mats.shape[0]
-        covar = np.cov(mats, rowvar=False, bias=False)
+        covar = sample_covariance(mats, bias=False)
         samplecov.append(covar)
         ns.append(ni)
         ntot += ni - 1
@@ -336,8 +318,9 @@ def schott_2001(X, Y):
            covariance matrices." Journal of Statistical Planning
            and Inference, 94(1), 25-36.
     """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
+    X, Y = validate_matching_data_matrices(
+        X, Y, mismatch_message="Dimensions do not match"
+    )
     # k = len(x)
     k = 2
     p = X.shape[1]
@@ -351,10 +334,7 @@ def schott_2001(X, Y):
     zstat = (stat - mu) / np.sqrt(sigma2)
     p_value = 2 * (1 - norm.cdf(abs(zstat)))
 
-    return {
-        "stat": zstat,
-        "p_value": p_value,
-    }
+    return result_dict(zstat, p_value)
 
 
 def _srivastava_yanagihara_stat(x):
@@ -372,7 +352,7 @@ def _srivastava_yanagihara_stat(x):
         mats = x[i]
         n = mats.shape[0]
         ns[i] = n
-        covar = np.cov(mats, rowvar=False)
+        covar = sample_covariance(mats)
         samplecov.append(covar)
 
         covartrace = np.trace(covar)
@@ -482,11 +462,7 @@ def srivastava_yanagihara_two_sample(X, Y):
 
     p_value = 1 - chi2.cdf(statistic, parameter)
 
-    results = {
-        "stat": statistic,
-        "p_value": p_value,
-    }
-    return results
+    return result_dict(statistic, p_value)
 
 
 def _srivastava_2007_stat(x):
@@ -503,7 +479,7 @@ def _srivastava_2007_stat(x):
         mats = x[i]
         n = mats.shape[0]
         ns[i] = n
-        covar = np.cov(mats, rowvar=False)
+        covar = sample_covariance(mats)
         samplecov.append(covar)
 
         covar2trace = np.trace(covar @ covar)
@@ -604,11 +580,7 @@ def srivastava_two_sample_2007(X, Y):
 
     p_value = 1 - chi2.cdf(statistic, parameter)
 
-    results = {
-        "stat": statistic,
-        "p_value": p_value,
-    }
-    return results
+    return result_dict(statistic, p_value)
 
 
 def wald_two_sample(X, Y):
@@ -637,11 +609,9 @@ def wald_two_sample(X, Y):
         - "test_statistic": the Wald test statistic
         - "p_value": the corresponding chi-squared p-value
     """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-
-    if X.shape[1] != Y.shape[1]:
-        raise ValueError("Dimensions do not match")
+    X, Y = validate_matching_data_matrices(
+        X, Y, mismatch_message="Dimensions do not match"
+    )
     if X.shape[1] >= X.shape[0] or Y.shape[1] >= Y.shape[0]:
         raise ValueError("This is not a high dimensional test")
 
@@ -649,8 +619,8 @@ def wald_two_sample(X, Y):
     m = Y.shape[0]
 
     # Sample covariances
-    s1 = np.cov(X, rowvar=False, bias=False)
-    s2 = np.cov(Y, rowvar=False, bias=False)
+    s1 = sample_covariance(X, bias=False)
+    s2 = sample_covariance(Y, bias=False)
 
     # Pooled covariance
     s_pooled = ((n - 1) * s1 + (m - 1) * s2) / (n + m - 2)
@@ -680,7 +650,7 @@ def wald_two_sample(X, Y):
     df = p * (p + 1) / 2
     p_value = chi2.sf(test_statistic, df=df)
 
-    return {"stat": test_statistic, "p_value": p_value}
+    return result_dict(test_statistic, p_value)
 
 
 def tyler_two_sample(X1, X2, unknown_mean=False):
@@ -746,7 +716,7 @@ def tyler_two_sample(X1, X2, unknown_mean=False):
         mu, sigma2 = tyler._mu_sigma2(c1, c2)
 
     z = (p * T2_tr - mu) / np.sqrt(sigma2)
-    return {"stat": z, "p_value": 1 - norm.cdf(z)}
+    return result_dict(z, 1 - norm.cdf(z))
 
 
 # Checked
@@ -790,7 +760,7 @@ def cai_2013_two_sample(X: np.ndarray, Y: np.ndarray) -> dict:
     TSvalue = M_n - 4 * np.log(p) + np.log(np.log(p))
     pvalue = 1 - np.exp(-1 / np.sqrt(8 * np.pi) * np.exp(-TSvalue / 2))
 
-    return {"stat": TSvalue, "p_value": pvalue}
+    return result_dict(TSvalue, pvalue)
 
 
 def he_2018_two_sample(
@@ -924,7 +894,7 @@ def he_2018_two_sample(
 
     p_values = [one_super(X, Y, i) for i in range(N + 1)]
 
-    return {"stat": 0, "p_value": p_values}
+    return result_dict(0, p_values)
 
 
 def chang2016(
@@ -998,11 +968,7 @@ def chang2016(
 
         ts[j] = np.max(np.abs(ts1 - ts2) / deno)
 
-    hd_res = {
-        "stat": Tnm,
-        "p_value": np.mean(ts >= Tnm),
-    }
-    return hd_res
+    return result_dict(Tnm, np.mean(ts >= Tnm))
 
 
 def schott2007(X: np.ndarray, Y: np.ndarray) -> Dict[str, Any]:
@@ -1067,9 +1033,7 @@ def schott2007(X: np.ndarray, Y: np.ndarray) -> Dict[str, Any]:
     Sc = (d1 + d2 - d3 - d4 - d5) / np.sqrt(th)
 
     sc_p = (1 - norm.cdf(np.abs(Sc))) * 2
-    sc_res = {"stat": np.abs(Sc), "p_value": sc_p}
-
-    return sc_res
+    return result_dict(np.abs(Sc), sc_p)
 
 
 def ding2023_two_sample(
@@ -1176,7 +1140,4 @@ def ding2023_two_sample(
     else:
         pvalue = 1 - chi2.cdf(statistic, df)
 
-    return {
-        "stat": statistic,
-        "p_value": pvalue,
-    }
+    return result_dict(statistic, pvalue)
