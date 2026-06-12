@@ -73,16 +73,6 @@ Proportionality tests
    proportionality_test_signs
    proportionality_plrt
    proportional_cov_test_tsukuda
-
-.. currentmodule:: covtest.methods.ahmad2022
-
-.. automodule:: covtest.methods.ahmad2022
-   :no-members:
-
-.. autosummary::
-   :toctree: generated/
-   :template: function.rst
-
    ahmad_2022_proportionality_test
 
 

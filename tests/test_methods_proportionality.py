@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from covtest.methods.hypothesis_proportionality import (
+    ahmad_2022_proportionality_test,
     bartlett_adjusted_proportionality_test,
     flury_proportionality_test,
     proportional_cov_test_tsukuda,
@@ -22,6 +23,7 @@ def assert_result_dict_2samp(res):
 @pytest.mark.parametrize(
     "method",
     [
+        ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
         bartlett_adjusted_proportionality_test,
@@ -42,6 +44,7 @@ def test_proportionality_methods_smoke(method):
 @pytest.mark.parametrize(
     "method",
     [
+        ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
         bartlett_adjusted_proportionality_test,
@@ -64,6 +67,7 @@ def test_proportionality_methods_null_finite(method):
 @pytest.mark.parametrize(
     "method",
     [
+        ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
         bartlett_adjusted_proportionality_test,
@@ -97,3 +101,31 @@ def test_proportionality_lz_regularization_numerical_stability():
     Y = rng.standard_normal((60, 25))
     res = proportionality_test_LZ(X, Y, regularize=1e-4)
     assert_result_dict_2samp(res)
+
+
+def test_ahmad_2022_helpers():
+    """Test the estimators in _ahmad2022.py module directly."""
+    from covtest.methods import _ahmad2022 as ahmad2022
+    rng = np.random.default_rng(42)
+    X1 = rng.standard_normal((50, 10))
+    X2 = rng.standard_normal((60, 10))
+
+    # Test estimate_Ei_trSigma2
+    E1 = ahmad2022.estimate_Ei_trSigma2(X1)
+    assert isinstance(E1, float)
+    assert E1 > 0
+
+    # Test estimate_E12_trSigma1Sigma2
+    E12 = ahmad2022.estimate_E12_trSigma1Sigma2(X1, X2)
+    assert isinstance(E12, float)
+
+    # Test validation exceptions
+    with pytest.raises(ValueError, match="must be a 2D array"):
+        ahmad2022.estimate_Ei_trSigma2(np.ones(10))
+
+    with pytest.raises(ValueError, match="Need n >= 4"):
+        ahmad2022.estimate_Ei_trSigma2(np.ones((3, 10)))
+
+    with pytest.raises(ValueError, match="same number of features"):
+        ahmad2022.estimate_E12_trSigma1Sigma2(np.ones((10, 5)), np.ones((10, 6)))
+
