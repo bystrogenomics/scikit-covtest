@@ -12,6 +12,7 @@ from . import _eriksen_1987 as eriksen1987
 from . import _flurry_1986 as flurry1986
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
+from . import _ahmad2022 as ahmad2022
 from .utils import validate_data_matrix
 
 ArrayLike = np.ndarray
@@ -625,3 +626,74 @@ def proportional_cov_test_tsukuda(
         p_value = 2.0 * stats.norm.sf(abs(Z))
 
     return {"stat": float(Z), "p_value": float(p_value)}
+
+
+def ahmad_2022_proportionality_test(X1, X2, alternative="two-sided"):
+    """
+    Ahmad (2022) proportionality test H0: Sigma1 = delta Sigma2.
+
+    Test statistic:
+        T_hat = E12 / sqrt(E1 * E2) - 1
+    Null limit:
+        sqrt(n1*n2) * T_hat -> N(0,1) under H0.
+
+    Parameters
+    ----------
+    X1 : ndarray, shape (n1_samples, n_features)
+    X2 : ndarray, shape (n2_samples, n_features)
+    alternative : {"two-sided", "greater", "less"}
+        - "two-sided": p = 2 * (1 - Phi(abs(z)))
+        - "greater":   p = 1 - Phi(z)
+        - "less":      p = Phi(z)
+
+    Returns
+    -------
+    result : dict with keys
+        - "stat"
+        - "T_hat"
+        - "z"
+        - "p_value"
+        - "E1", "E2", "E12"
+    """
+    X1 = ahmad2022._validate_matrix(X1)
+    X2 = ahmad2022._validate_matrix(X2)
+    n1, p1 = X1.shape
+    n2, p2 = X2.shape
+    if p1 != p2:
+        raise ValueError(
+            "X1 and X2 must have the same number of features (columns)."
+        )
+
+    E1 = ahmad2022.estimate_Ei_trSigma2(X1)
+    E2 = ahmad2022.estimate_Ei_trSigma2(X2)
+    E12 = ahmad2022.estimate_E12_trSigma1Sigma2(X1, X2)
+
+    if E1 <= 0 or E2 <= 0:
+        raise ValueError(
+            f"Non-positive E1 or E2 encountered (E1={E1}, E2={E2}). "
+            "This can happen with very small n or numerical issues."
+        )
+
+    T_hat = (E12 / np.sqrt(E1 * E2)) - 1.0
+    z = np.sqrt(n1 * n2) * T_hat
+
+    if alternative == "two-sided":
+        p_value = 2.0 * (1.0 - stats.norm.cdf(abs(z)))
+    elif alternative == "greater":
+        p_value = 1.0 - stats.norm.cdf(z)
+    elif alternative == "less":
+        p_value = stats.norm.cdf(z)
+    else:
+        raise ValueError(
+            "alternative must be one of: 'two-sided', 'greater', 'less'."
+        )
+
+    return {
+        "stat": float(z),
+        "T_hat": float(T_hat),
+        "z": float(z),
+        "p_value": float(p_value),
+        "E1": float(E1),
+        "E2": float(E2),
+        "E12": float(E12),
+    }
