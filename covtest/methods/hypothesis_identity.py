@@ -466,3 +466,53 @@ def srivastava2011_single_sample(X, Sigma="identity"):
     p_value = 2 * (1 - norm.cdf(abs(statistic)))
 
     return result_dict(statistic, p_value)
+
+
+def one_sample_cov_test(X, mean=None, S=None):
+    """
+    Perform a one-sample covariance test to evaluate if the sample
+    covariance differs
+    from the identity matrix or another specified covariance matrix.
+
+    Parameters
+    ----------
+    X : ndarray of shape (n_samples, n_features)
+        The input data matrix.
+    mean : ndarray of shape (n_features,), default=None
+        The mean vector for adjusting the data. If None, use the sample mean.
+    S : ndarray of shape (n_features, n_features), default=None
+        The covariance matrix for the test. If None, the identity matrix is assumed.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'p_value': The p-value of the test.
+        - 'z_value': The computed Z-value for the test.
+        - 'lrt': The likelihood ratio test statistic.
+    """
+    n, p = X.shape
+    y = p / n
+    N = n - 1
+    yN = p / N
+
+    if S is not None:
+        S_half = la.cholesky(S)
+        X = X @ la.inv(S_half)
+
+    if mean is None:
+        X = X - np.mean(X, axis=0)
+        S = X.T @ X / N
+    else:
+        X = X - mean
+        S = X.T @ X / n
+
+    lrt = np.sum(np.diag(S)) - np.log(la.det(S)) - p
+    mu1 = -0.5 * np.log(1 - y)
+    sigma1 = -2 * np.log(1 - y) - 2 * y
+    z_value = (lrt - p * (1 + (1 - yN) / yN * np.log(1 - yN)) - mu1) / np.sqrt(
+        sigma1
+    )
+    p_value = norm.sf(z_value)
+
+    return {"p_value": p_value, "z_value": z_value, "lrt": lrt}

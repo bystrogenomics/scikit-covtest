@@ -1,9 +1,7 @@
 import numpy as np
 
-from covtest.methods.rmt4ds_cov_test import (
-    one_sample_cov_test,
-    two_sample_cov_test,
-)
+from covtest.methods.hypothesis_identity import one_sample_cov_test
+from covtest.methods.hypothesis_two_sample import two_sample_cov_test
 
 
 def test_cov_test():

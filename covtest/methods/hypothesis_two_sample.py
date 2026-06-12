@@ -8,6 +8,7 @@ from . import _ahmad2017 as ahmad2017
 from . import _ding as ding2023
 from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
+from .rmt_stat import d2, mu2, sigma2_2
 from .utils import (
     result_dict,
     sample_covariance,
@@ -1141,3 +1142,61 @@ def ding2023_two_sample(
         pvalue = 1 - chi2.cdf(statistic, df)
 
     return result_dict(statistic, pvalue)
+
+
+def two_sample_cov_test(X1, X2, mean=None):
+    """
+    Perform a two-sample covariance test to determine if there is a significant
+    difference between the covariances of two samples.
+
+    Parameters
+    ----------
+    X1 : ndarray of shape (n_samples1, n_features)
+        The first input data matrix.
+    X2 : ndarray of shape (n_samples2, n_features)
+        The second input data matrix.
+    mean : ndarray of shape (n_features,), default=None
+        The mean vector to be used for adjusting both samples.
+        If None, use the sample means.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'p_value': The p-value of the test.
+        - 'z_value': The computed Z-value for the test.
+        - 'lrt': The likelihood ratio test statistic.
+    """
+    if X1.shape[1] != X2.shape[1]:
+        raise ValueError("Input data should have the same dimension")
+
+    n1, p1 = X1.shape
+    n2, p2 = X2.shape
+    if mean is not None:
+        N1 = n1
+        N2 = n2
+        X1 = X1 - mean
+        X2 = X2 - mean
+    else:
+        N1 = n1 - 1
+        N2 = n2 - 1
+        X1 = X1 - np.mean(X1, axis=0)
+        X2 = X2 - np.mean(X2, axis=0)
+
+    N = N1 + N2
+    c1 = N1 / N
+    c2 = N2 / N
+    yN1 = p1 / N1
+    yN2 = p2 / N2
+    S1 = X1.T @ X1 / N1
+    S2 = X2.T @ X2 / N2
+
+    log_V1_ = np.log(la.det(S1 @ la.solve(S2, np.eye(p1)))) * (N1 / 2) - np.log(
+        la.det(c1 * S1 @ la.solve(S2, np.eye(p2)) + c2 * np.eye(p2))
+    ) * (N / 2)
+    z_value = (-2 / N * log_V1_ - p1 * d2(yN1, yN2) - mu2(yN1, yN2)) / np.sqrt(
+        sigma2_2(yN1, yN2)
+    )
+    p_value = norm.sf(z_value)
+
+    return {"p_value": p_value, "z_value": z_value, "lrt": -2 * log_V1_}

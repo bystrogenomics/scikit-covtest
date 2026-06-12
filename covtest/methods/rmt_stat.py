@@ -673,3 +673,95 @@ def rtw(n, beta=1):
     u = rng.uniform(low=0.0, high=1.0, size=n)
     mod = TracyWidom(beta=beta)
     return mod.cdfinv(u)
+
+
+def d2(y1, y2):
+    """
+    Compute a specific mathematical formula involving the logarithm and
+    division operations.
+
+    Parameters
+    ----------
+    y1 : float
+        The first input value used in the computation.
+    y2 : float
+        The second input value used in the computation.
+
+    Returns
+    -------
+    float
+        The result of the computed formula based on y1 and y2.
+    """
+    return (
+        (y1 + y2 - y1 * y2)
+        / (y1 * y2)
+        * np.log((y1 + y2) / (y1 + y2 - y1 * y2))
+        + y1 * (1 - y2) / (y2 * (y1 + y2)) * np.log(1 - y2)
+        + y2 * (1 - y1) / (y1 * (y1 + y2)) * np.log(1 - y1)
+    )
+
+
+def mu2(y1, y2):
+    """
+    Compute a logarithmic formula used in statistical calculations involving covariance.
+
+    Parameters
+    ----------
+    y1 : float
+        The first input value.
+    y2 : float
+        The second input value.
+
+    Returns
+    -------
+    float
+        The result of the computed formula.
+    """
+    return 0.5 * np.log((y1 + y2 - y1 * y2) / (y1 + y2)) - (
+        y1 * np.log(1 - y2) + y2 * np.log(1 - y1)
+    ) / (y1 + y2)
+
+
+def sigma2_2(y1, y2):
+    """
+    Compute the variance component used in statistical tests for comparing covariances.
+
+    Parameters
+    ----------
+    y1 : float
+        The first input value.
+    y2 : float
+        The second input value.
+
+    Returns
+    -------
+    float
+        The computed variance based on y1 and y2.
+    """
+    return -(2 * y1**2 * np.log(1 - y2) + 2 * y2**2 * np.log(1 - y1)) / (
+        y1 + y2
+    ) ** 2 - 2 * np.log((y1 + y2) / (y1 + y2 - y1 * y2))
+
+
+def d2_hat(y1, y2):
+    """
+    Adjust the d2 computation by accounting for the proportions of
+    y1 and y2 in the total.
+
+    Parameters
+    ----------
+    y1 : float
+        The first input value.
+    y2 : float
+        The second input value.
+
+    Returns
+    -------
+    float
+        The adjusted result of the d2 formula.
+    """
+    return (
+        d2(y1, y2)
+        - y1 / (y1 + y2) * np.log(y1 / (y1 + y2))
+        - y2 / (y1 + y2) * np.log(y2 / (y1 + y2))
+    )
