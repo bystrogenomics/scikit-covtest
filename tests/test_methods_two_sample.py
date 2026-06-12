@@ -6,6 +6,8 @@ from covtest.methods.hypothesis_two_sample import (
     _srivastava_2007_stat,
     _srivastava_yanagihara_stat,
     boxm_test,
+    cai_liu_xia_2013_two_sample_test,
+    chang_2017_perturbation_max_test,
     schott_2001,
     srivastava_two_sample_2007,
     srivastava_yanagihara_two_sample,
@@ -107,3 +109,18 @@ def test_two_sample_cov_test(data_two_groups):
     res = two_sample_cov_test(X1, X2)
     assert set(res.keys()) == {"p_value", "z_value", "lrt"}
     assert 0 <= res["p_value"] <= 1
+
+
+def test_cai_liu_xia_2013(data_two_groups):
+    X1, X2 = data_two_groups
+    res = cai_liu_xia_2013_two_sample_test(X1, X2)
+    assert "Mn" in res
+    assert 0 <= res["p_value"] <= 1
+
+
+def test_chang_2017(data_two_groups):
+    X1, X2 = data_two_groups
+    res = chang_2017_perturbation_max_test(X1, X2, B=10)
+    assert "Tmax" in res
+    assert 0 <= res["p_value"] <= 1
+

@@ -5,6 +5,8 @@ import numpy.linalg as la
 from scipy.stats import chi2, f, norm  # type: ignore
 
 from . import _ahmad2017 as ahmad2017
+from . import _cai as cai
+from . import _chang as chang
 from . import _ding as ding2023
 from . import _ishii2015 as ishii2015
 from . import _tylers as tyler
@@ -1200,3 +1202,209 @@ def two_sample_cov_test(X1, X2, mean=None):
     p_value = norm.sf(z_value)
 
     return {"p_value": p_value, "z_value": z_value, "lrt": -2 * log_V1_}
+
+
+def cai_liu_xia_2013_two_sample_test(
+    X, Y, alpha=0.05, use_upper_triangle=True, eps=1e-12
+):
+    """
+    Cai, Liu & Xia (2013) two-sample covariance test (max-type).
+
+    Parameters
+    ----------
+    X : ndarray, shape (n1, p)
+    Y : ndarray, shape (n2, p)
+    alpha : float
+        Significance level used for the critical value (Eq. (4)-(5)).
+    use_upper_triangle : bool
+        If True, compute max over i<=j only (as in the paper).
+        If False, compute max over all i,j (gives the same max for symmetric matrices).
+    eps : float
+        Small jitter to avoid division by zero in pathological cases.
+
+    Returns
+    -------
+    result : dict with keys:
+        - Mn : float, max statistic (Eq. (3))
+        - t  : float, centered/scaled value Mn - 4 log p + log log p
+        - p_value : float, asymptotic p-value from Theorem 1 / Eq. (9)
+        - critical_value : float, q_alpha + 4 log p - log log p (Eq. (4)-(5))
+        - reject : bool, Mn >= critical_value
+    """
+    X = cai._validate_matrix(X, "X")
+    Y = cai._validate_matrix(Y, "Y")
+    n1, p = X.shape
+    n2, p2 = Y.shape
+    if p2 != p:
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
+    if n1 < 2 or n2 < 2:
+        raise ValueError("Need n1 >= 2 and n2 >= 2.")
+
+    # Center
+    Xc = cai._center(X)
+    Yc = cai._center(Y)
+
+    # Paper's sample covariances: (1/n) sum (x - xbar)(x - xbar)^T.
+    S1 = cai._sample_cov_unbiased(Xc)
+    S2 = cai._sample_cov_unbiased(Yc)
+
+    # theta-hat matrices (Section 2).
+    theta1 = cai._theta_hat_matrix(Xc, S1)
+    theta2 = cai._theta_hat_matrix(Yc, S2)
+
+    # Denominator: theta1/n1 + theta2/n2
+    denom = theta1 / n1 + theta2 / n2
+    denom = np.maximum(denom, eps)
+
+    diff = S1 - S2
+    M = (diff * diff) / denom  # M_ij (Eq. (2))
+
+    if use_upper_triangle:
+        iu = np.triu_indices(p)
+        Mn = float(np.max(M[iu]))
+    else:
+        Mn = float(np.max(M))
+
+    # Asymptotic null scaling (Theorem 1 / Eq. (9))
+    t = Mn - 4.0 * np.log(p) + np.log(np.log(p))
+
+    # Limiting CDF F(t) = exp( - (1/sqrt(8pi)) exp(-t/2) ) (Eq. (9))
+    F_t = np.exp(-(1.0 / np.sqrt(8.0 * np.pi)) * np.exp(-t / 2.0))
+    p_value = float(1.0 - F_t)  # upper tail
+
+    # Critical value via q_alpha (Eq. (4)-(5))
+    # q_alpha = -log(8pi) - 2 log( log((1-alpha)^{-1}) )
+    q_alpha = -np.log(8.0 * np.pi) - 2.0 * np.log(np.log(1.0 / (1.0 - alpha)))
+    critical_value = float(q_alpha + 4.0 * np.log(p) - np.log(np.log(p)))
+
+    reject = Mn >= critical_value
+
+    return {
+        "Mn": float(Mn),
+        "t": float(t),
+        "p_value": p_value,
+        "critical_value": critical_value,
+        "reject": bool(reject),
+        "n1": int(n1),
+        "n2": int(n2),
+        "p": int(p),
+    }
+
+
+def chang_2017_perturbation_max_test(
+    X,
+    Y,
+    alpha=0.05,
+    B=1000,
+    use_upper_triangle=True,
+    eps=1e-12,
+    random_state=None,
+):
+    """
+    Chang et al. (Biometrics 2017) perturbation (multiplier bootstrap) max test
+    for equality of two covariance matrices in high dimension.
+
+    Inputs
+    ------
+    X : array (n, p)  First group, rows = samples
+    Y : array (m, p)  Second group, rows = samples
+    alpha : significance level for critical value
+    B : number of multiplier bootstrap replicates
+    use_upper_triangle : if True, max over i<=j; else over all i,j
+    eps : jitter for denominator stability
+    random_state : None | int | np.random.Generator
+
+    Returns
+    -------
+    dict with:
+      - Tmax : observed max statistic
+      - critical_value : bootstrap (1-alpha) quantile of Tmax^*
+      - p_value : bootstrap p-value (upper tail)
+      - reject : Tmax > critical_value
+      - n, m, p
+    """
+    X = chang._validate_matrix(X, "X")
+    Y = chang._validate_matrix(Y, "Y")
+    n, p = X.shape
+    m, p2 = Y.shape
+    if p2 != p:
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
+    if n < 2 or m < 2:
+        raise ValueError("Need at least 2 samples per group.")
+
+    rng = random_state
+    if isinstance(rng, (int, np.integer)) or rng is None:
+        rng = np.random.default_rng(rng)
+    elif not isinstance(rng, np.random.Generator):
+        raise ValueError(
+            "random_state must be None, an int seed, or a numpy.random.Generator."
+        )
+
+    # Center data
+    Xc = chang._center(X)
+    Yc = chang._center(Y)
+
+    # Sample covariances and theta-hats (variance of centered cross-products)
+    Sx, thetax = chang._cov_and_theta_hat(Xc)
+    Sy, thetay = chang._cov_and_theta_hat(Yc)
+
+    # Denominator matrix for t_{jk}
+    denom = thetax / n + thetay / m
+    denom = np.maximum(denom, eps)
+
+    # Observed entrywise t-stats and Tmax
+    T = (Sx - Sy) / np.sqrt(denom)
+    if use_upper_triangle:
+        iu = np.triu_indices(p)
+        Tmax = float(np.max(np.abs(T[iu])))
+    else:
+        Tmax = float(np.max(np.abs(T)))
+
+    # Multiplier bootstrap for critical value / p-value
+    Tmax_star = np.empty(B, dtype=float)
+
+    # Precompute for speed
+    # (We use the paper's perturbation: (1/n) sum g_i (x_i x_i^T - S))
+    for b in range(B):
+        g1 = rng.standard_normal(n)
+        g2 = rng.standard_normal(m)
+
+        # Efficient weighted outer sums:
+        # Sum_i g_i x_i x_i^T  = X^T (diag(g) X) = X^T (g[:,None]*X)
+        Wx = Xc * g1[:, None]
+        Wy = Yc * g2[:, None]
+
+        sum_g1 = float(g1.sum())
+        sum_g2 = float(g2.sum())
+
+        Sx_star = (Xc.T @ Wx) / n - Sx * (sum_g1 / n)
+        Sy_star = (Yc.T @ Wy) / m - Sy * (sum_g2 / m)
+
+        T_star = (Sx_star - Sy_star) / np.sqrt(denom)
+
+        if use_upper_triangle:
+            Tmax_star[b] = np.max(np.abs(T_star[iu]))
+        else:
+            Tmax_star[b] = np.max(np.abs(T_star))
+
+    critical_value = float(np.quantile(Tmax_star, 1.0 - alpha))
+
+    # Upper-tail bootstrap p-value (add-one smoothing)
+    p_value = float((1.0 + np.sum(Tmax_star >= Tmax)) / (B + 1.0))
+    reject = bool(Tmax > critical_value)
+
+    return {
+        "Tmax": Tmax,
+        "critical_value": critical_value,
+        "p_value": p_value,
+        "reject": reject,
+        "n": int(n),
+        "m": int(m),
+        "p": int(p),
+        "B": int(B),
+        "alpha": float(alpha),
+    }
