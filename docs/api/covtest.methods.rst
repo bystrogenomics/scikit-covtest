@@ -104,30 +104,8 @@ Two-sample and multi-sample covariance tests
    schott2007
    ding2023_two_sample
    two_sample_cov_test
-
-
-.. currentmodule:: covtest.methods.cai
-
-.. automodule:: covtest.methods.cai
-   :no-members:
-
-.. autosummary::
-   :toctree: generated/
-   :template: function.rst
-
    cai_liu_xia_2013_two_sample_test
-
-.. currentmodule:: covtest.methods.chang
-
-.. automodule:: covtest.methods.chang
-   :no-members:
-
-.. autosummary::
-   :toctree: generated/
-   :template: function.rst
-
    chang_2017_perturbation_max_test
-
 
 
 
