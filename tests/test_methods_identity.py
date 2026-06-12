@@ -9,6 +9,7 @@ from covtest.methods.hypothesis_identity import (
     fisher_single_sample,
     ledoit_wolf_identity,
     nagao_identity,
+    one_sample_cov_test,
     srivastava2011_single_sample,
     srivastava_2005_identity,
     tyler_identity,
@@ -110,3 +111,9 @@ def test_invalid_sigma_raises(identity_data):
         fisher_single_sample(identity_data, Sigma=bad_sigma)
     with pytest.raises(Exception):
         srivastava2011_single_sample(identity_data, Sigma=bad_sigma)
+
+
+def test_one_sample_cov_test(identity_data):
+    res = one_sample_cov_test(identity_data)
+    assert set(res.keys()) == {"p_value", "z_value", "lrt"}
+    assert 0 <= res["p_value"] <= 1

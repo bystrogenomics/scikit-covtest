@@ -31,6 +31,8 @@ Identity covariance tests
    tyler_identity
    fisher_single_sample
    srivastava2011_single_sample
+   one_sample_cov_test
+
 
 
 Sphericity tests
@@ -101,6 +103,8 @@ Two-sample and multi-sample covariance tests
    chang2016
    schott2007
    ding2023_two_sample
+   two_sample_cov_test
+
 
 .. currentmodule:: covtest.methods.cai
 
@@ -125,21 +129,6 @@ Two-sample and multi-sample covariance tests
    chang_2017_perturbation_max_test
 
 
-Random Matrix Theory (RMT) covariance tests
--------------------------------------------
-
-.. currentmodule:: covtest.methods.rmt4ds_cov_test
-
-.. automodule:: covtest.methods.rmt4ds_cov_test
-   :no-members:
-
-.. autosummary::
-   :toctree: generated/
-   :template: function.rst
-
-   one_sample_cov_test
-   two_sample_cov_test
-   multi_sample_cov_test
 
 
 Random Matrix Theory (RMT) distribution statistics
@@ -168,4 +157,8 @@ Random Matrix Theory (RMT) distribution statistics
    q_wishart_spike
    wishart_max_par
    wishart_spike_par
+   d2
+   mu2
+   sigma2_2
+   d2_hat
 

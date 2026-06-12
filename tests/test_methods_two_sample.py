@@ -9,6 +9,7 @@ from covtest.methods.hypothesis_two_sample import (
     schott_2001,
     srivastava_two_sample_2007,
     srivastava_yanagihara_two_sample,
+    two_sample_cov_test,
     tyler_two_sample,
     wald_two_sample,
 )
@@ -98,3 +99,11 @@ def test_tyler_two_sample(data_two_groups):
     assert set(res_unknown.keys()) == {"stat", "p_value"}
     assert 0 <= res_known["p_value"] <= 1
     assert 0 <= res_unknown["p_value"] <= 1
+
+
+def test_two_sample_cov_test(data_two_groups):
+    X1, X2 = data_two_groups
+    # Needs matching dimensions
+    res = two_sample_cov_test(X1, X2)
+    assert set(res.keys()) == {"p_value", "z_value", "lrt"}
+    assert 0 <= res["p_value"] <= 1

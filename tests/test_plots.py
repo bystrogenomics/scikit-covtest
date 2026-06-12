@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-
 # Import your plotting functions
 from covtest.plotting.null import (
     plot_pval_calibration,
