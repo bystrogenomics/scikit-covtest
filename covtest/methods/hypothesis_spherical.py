@@ -514,3 +514,497 @@ def hallin_rank_sphericity_test(X, method="wilcoxon"):
     pval = 1 - stats.chi2.cdf(Q, df)
 
     return result_dict(Q, pval)
+
+
+def _gram_aggregates(X):
+    """Return pre-computed aggregates of the n x n Gram matrix G = X X'.
+
+    Parameters
+    ----------
+    X : array (n, p) - rows are observations (already optionally centred).
+
+    Returns
+    -------
+    G         : (n, n) Gram matrix
+    d         : (n,)  diagonal of G, i.e. squared row-norms
+    R         : (n,)  off-diagonal row sums  R_i = sum_{j != i} G_{ij}
+    s_off     : float  sum of all off-diagonal entries of G
+    sumsq_off : float  sum of squares of all off-diagonal entries of G
+    sum_R2    : float  sum_i R_i^2
+    sum_d     : float  sum_i d_i = tr(V)
+    sum_d_sq  : float  sum_i d_i^2 = tr(D^2)
+    sum_dR    : float  sum_i d_i * R_i
+    """
+    G = X @ X.T
+    d = np.diag(G)
+    r_full = G.sum(axis=1)
+    R = r_full - d  # off-diagonal row sums
+    s_off = float(R.sum())
+    sumsq_all = float(np.sum(G * G))
+    sumsq_diag = float(np.sum(d * d))
+    sumsq_off = sumsq_all - sumsq_diag
+    sum_R2 = float(np.sum(R * R))
+    sum_d = float(d.sum())
+    sum_d_sq = float(sumsq_diag)
+    sum_dR = float(np.dot(d, R))
+    return G, d, R, s_off, sumsq_off, sum_R2, sum_d, sum_d_sq, sum_dR
+
+
+def _spatial_sign_cov(X):
+    """Spatial-sign sample covariance matrix B_hat_n (p x p).
+
+    x_hat_j = sqrt(p) * x_j / ||x_j||  (scaled to have ||x_hat_j|| = sqrt(p))
+    B_hat_n = (1/n) * sum_j  x_hat_j @ x_hat_j.T
+
+    Rows of X with zero norm are silently dropped.
+    """
+    n, p = X.shape
+    norms = np.linalg.norm(X, axis=1, keepdims=True)  # (n, 1)
+    mask = norms.ravel() > 0
+    Xs = X[mask] / norms[mask]  # unit-norm rows
+    Xs_scaled = Xs * p**0.5  # scaled to norm sqrt(p)
+    B = (Xs_scaled.T @ Xs_scaled) / n  # (p, p)
+    return B
+
+
+def fisher_2010_sphericity_test(X, center=True):
+    r"""Fisher-Sun-Gallagher (2010) sphericity test.
+
+    Tests H0 : Sigma = sigma^2 I_p using the ratio of the bias-corrected
+    fourth and second arithmetic means of the sample eigenvalues.
+
+    Test statistic (Corollary 1, eq. (5), with scale n/C to give N(0,1))::
+
+        T = n / sqrt(8*(8 + 12*c + c^2)) * (a_hat_4 / a_hat_2^2 - 1)
+
+    where c = p/n, a_hat_2 is Srivastava's (2005) unbiased estimator of
+    a_2 = tr(Sigma^2)/p, and a_hat_4 is the unbiased estimator of
+    a_4 = tr(Sigma^4)/p (Theorem 1, eq. (2)).
+
+    Under assumptions (A) and (B), T -> N(0,1) as (n,p) -> inf with
+    p/n -> c in (0, inf).  The test is right-tailed.
+
+    Parameters
+    ----------
+    X : array-like (N, p)
+        Data matrix; N rows are observations, p columns are variables.
+        N must satisfy N >= 8 (n = N-1 >= 7) for tau to be defined.
+    center : bool, default True
+        If True, subtract column means before computing S.
+
+    Returns
+    -------
+    dict with keys 'stat' (= T) and 'p_value'.
+
+    References
+    ----------
+    .. [1] Fisher, T. J., Sun, X., & Gallagher, C. M. (2010). "A new test
+           for sphericity of the covariance matrix for high dimensional
+           data." Journal of Multivariate Analysis, 101(10), 2554-2570.
+    """
+    X = validate_data_matrix(X)
+    N, p = X.shape
+    n = N - 1  # Wishart degrees of freedom
+
+    if n < 7:
+        raise ValueError(
+            "Fisher (2010) test requires N >= 8 (n = N-1 >= 7) so that "
+            "the denominator of tau is non-zero."
+        )
+
+    if center:
+        X = X - X.mean(axis=0, keepdims=True)
+
+    S = (X.T @ X) / n  # sample covariance, denominator n = N-1
+
+    trS = float(np.trace(S))
+    S2 = S @ S
+    trS2 = float(np.trace(S2))
+    S3 = S2 @ S
+    trS3 = float(np.trace(S3))
+    trS4 = float(np.trace(S3 @ S))
+
+    # --- Srivastava (2005) unbiased estimator of a_2 = tr(Sigma^2)/p ----
+    cn = (n * n) / ((n - 1) * (n + 2))
+    a2_hat = cn * (trS2 - trS**2 / n) / p
+
+    # --- Fisher (2010) unbiased estimator of a_4 = tr(Sigma^4)/p --------
+    #   a_hat_4 = (tau/p) * [tr(S^4)
+    #             + b*tr(S^3)*tr(S) + c**{trS2}^2
+    #             + d*tr(S^2)*(trS)^2 + e*(trS)^4]
+    denom = n**2 + n + 2
+    tau = (n**5 * denom) / (
+        (n + 1) * (n + 2) * (n + 4) * (n + 6) * (n - 1) * (n - 2) * (n - 3)
+    )
+    b_coef = -4.0 / n
+    c_star = -(2 * n**2 + 3 * n - 6) / (n * denom)
+    d_coef = 2 * (5 * n + 6) / (n * denom)
+    e_coef = -(5 * n + 6) / (n**2 * denom)
+
+    a4_hat = (tau / p) * (
+        trS4
+        + b_coef * trS3 * trS
+        + c_star * trS2**2
+        + d_coef * trS2 * trS**2
+        + e_coef * trS**4
+    )
+
+    if a2_hat <= 0:
+        raise ValueError(
+            f"a_hat_2 = {a2_hat:.6g} <= 0; check data quality or use a "
+            "larger sample."
+        )
+
+    c_ratio = p / n
+    # Scale factor: n / sqrt(8*(8+12c+c^2))  -- see implementation notes
+    T = (
+        n
+        / (8 * (8 + 12 * c_ratio + c_ratio**2)) ** 0.5
+        * (a4_hat / a2_hat**2 - 1.0)
+    )
+    pval = float(stats.norm.sf(T))  # right-tailed
+    return result_dict(float(T), pval)
+
+
+def srivastava_2014_sphericity_test(X):
+    r"""Srivastava-Yanagihara-Kubokawa (2014) sphericity test.
+
+    Modification of the Srivastava (2005) test using a new U-statistic
+    estimator of a_2 = tr(Sigma^2)/p that is unbiased for *any* distribution
+    satisfying mild moment conditions, not only the Gaussian distribution.
+
+    Test statistic (eq. (3.6), scale (n/2) to give N(0,1))::
+
+        T_1 = (n/2) * (a_hat_2 / a_hat_1^2 - 1)
+
+    where n = N - 1 (Wishart df), a_hat_1 = tr(S)/p, and a_hat_2 is the
+    new unbiased estimator (eq. (2.5))::
+
+        a_hat_2 = [(N-2)*n*tr(V^2) - N*n*tr(D^2) + (tr V)^2]
+                  / [p * N*(N-1)*(N-2)*(N-3)]
+
+    with V = sum_j y_j y_j' (= (N-1)*S, the Wishart scatter matrix),
+    D = diag(y_1'y_1, ..., y_N'y_N), y_j = x_j - x_bar.
+
+    This estimator is unbiased for any distribution satisfying (1.1)-(1.3),
+    whereas Srivastava (2005)'s a_hat_{2s} is biased under non-normality
+    when K_4 != 0.
+
+    Under H0 and as (N, p) -> inf with N = O(p^delta), 1/2 < delta < 1,
+    T_1 -> N(0,1).  The test is right-tailed.
+
+    Parameters
+    ----------
+    X : array-like (N, p)
+        Data matrix; N rows are observations, p columns are variables.
+        Requires N >= 4.
+
+    Returns
+    -------
+    dict with keys 'stat' (= T_1) and 'p_value'.
+
+        References
+    ----------
+    .. [1] Srivastava, M. S., Yanagihara, H., & Kubokawa, T. (2014).
+           "Tests for covariance matrices in high dimension with less
+           sample size." Journal of Multivariate Analysis, 130, 289-309.
+    """
+    X = validate_data_matrix(X)
+    N, p = X.shape
+    n = N - 1  # Wishart df
+
+    if N < 4:
+        raise ValueError("Srivastava (2014) test requires N >= 4.")
+
+    # Centre the data; V = Y.T @ Y where Y is the (N, p) centred matrix
+    Y = X - X.mean(axis=0, keepdims=True)
+
+    # N x N Gram matrix of centred observations
+    G_c = Y @ Y.T
+    d_c = np.diag(G_c)  # d_i = ||y_i||^2
+
+    sum_d = float(d_c.sum())  # tr(V)
+    sum_d_sq = float(np.dot(d_c, d_c))  # tr(D^2) = sum_i d_i^2
+
+    # tr(V^2) = sum_{i,j} G_c[i,j]^2 = tr(G_c^2)
+    trV2 = float(np.sum(G_c * G_c))
+
+    # a_hat_2 from eq. (2.5):
+    #   [(N-2)*n * tr(V^2)  -  N*n * tr(D^2)  +  (tr V)^2]
+    #   / [p * N*(N-1)*(N-2)*(N-3)]
+    # with n = N-1 so (N-2)*n = (N-2)*(N-1) and N*n = N*(N-1).
+    num_a2 = (N - 2) * n * trV2 - N * n * sum_d_sq + sum_d**2
+    den_a2 = float(p) * N * n * (N - 2) * (N - 3)
+    a2_hat = num_a2 / den_a2
+
+    # a_hat_1 = tr(S)/p = tr(V)/(n*p)
+    a1_hat = sum_d / (n * p)
+
+    if a1_hat <= 0:
+        raise ValueError(
+            f"a_hat_1 = {a1_hat:.6g} <= 0; sample covariance is degenerate."
+        )
+
+    # Scale (n/2) follows the same convention as the existing
+    # srivastava_2005_sphericity implementation -- see implementation notes
+    T1 = (n / 2.0) * (a2_hat / a1_hat**2 - 1.0)
+    pval = float(stats.norm.sf(T1))  # right-tailed
+    return result_dict(float(T1), pval)
+
+
+def hu_2019_sphericity_test(X, center=True, return_all=False):
+    r"""Hu-Li-Liu-Zhou (2019) spatial-sign sphericity tests.
+
+    Tests H0 : Sigma = sigma^2 I_p for elliptical populations using linear
+    spectral statistics of the spatial-sign sample covariance matrix::
+
+        B_hat_n = (1/n) sum_j  x_hat_j x_hat_j',   x_hat_j = sqrt(p)*x_j/||x_j||.
+
+    Two test statistics are provided (Theorem 3.1):
+
+    T_1 = alpha_hat_{n,2} - 1
+        alpha_hat_{n,2} = beta_hat_{n,2} - c_n,
+        beta_hat_{n,j} = p^{-1} tr(B_hat_n^j), c_n = p/n.
+
+    T_2 = alpha_hat_{n,4} - 1  (new; more sensitive to spike alternatives)
+        alpha_hat_{n,4} = beta_hat_{n,4} - 4*c_n*beta_hat_{n,3}
+                          - 2*c_n*(beta_hat_{n,2})^2
+                          + 10*c_n^2*beta_hat_{n,2} - 5*c_n^3.
+
+    Combined max-type statistic (Theorem 3.2)::
+
+        Tm = max(z1, z2)
+        z1 = (n*T_1 + 1) / 2
+        z2 = (n*T_2 + 6 - c_n) / sqrt(8*(18 + 12*c_n + c_n^2))
+
+    Under H0, n*(T_1, T_2) -> N_2((-1, -6+c), Omega) where Omega has
+    omega_11=4, omega_12=24, omega_22=8*(18+12c+c^2).  Tm is right-tailed.
+
+    The combined test Tm is more robust than T_1 or T_2 alone against
+    spike-like covariance alternatives.  By default the function returns
+    only Tm; set return_all=True to also get the individual tests.
+        Parameters
+    ----------
+    X : array-like (n, p)
+        Data matrix; rows are observations.
+    center : bool, default True
+        If True, subtract column means before computing spatial signs.
+    return_all : bool, default False
+        If True, return a dict with keys 'T1', 'T2', 'Tm' (each a
+        result_dict).  If False, return only the Tm result_dict.
+
+    Returns
+    -------
+    dict with keys 'stat' and 'p_value' (for Tm), or a dict of three
+    result_dicts when return_all=True.
+
+    Notes
+    -----
+    The combined max test Tm has mild finite-sample size inflation for
+    small n or p (see Hu et al. 2019 Table S2).  Use with min(n, p) >= 100
+    for well-calibrated type-I error.
+
+    References
+    ----------
+    .. [1] Hu, J., Li, W., Liu, Z., & Zhou, W. (2019). "High-dimensional
+           covariance matrices in elliptical distributions with application
+           to spherical test." The Annals of Statistics, 47(1), 527-555.
+    """
+    X = validate_data_matrix(X)
+    n, p = X.shape
+
+    if n < 2:
+        raise ValueError("Hu (2019) test requires n >= 2.")
+
+    if center:
+        X = X - X.mean(axis=0, keepdims=True)
+
+    c_n = p / n
+
+    # Spatial-sign sample covariance (p x p)
+    B = _spatial_sign_cov(X)
+
+    # Spectral moments via eigenvalues (more stable than matrix powers)
+    eigs = np.linalg.eigvalsh(B)  # all real, >= 0
+
+    b2 = float(np.sum(eigs**2)) / p
+    b3 = float(np.sum(eigs**3)) / p
+    b4 = float(np.sum(eigs**4)) / p
+
+    # Bias-corrected spectral moments
+    alpha2 = b2 - c_n
+    alpha4 = (
+        b4
+        - 4.0 * c_n * b3
+        - 2.0 * c_n * b2**2
+        + 10.0 * c_n**2 * b2
+        - 5.0 * c_n**3
+    )
+
+    T1 = alpha2 - 1.0
+    T2 = alpha4 - 1.0
+
+    # Standardised individual statistics
+    z1 = (n * T1 + 1.0) / 2.0
+    denom_T2 = 8.0 * (18.0 + 12.0 * c_n + c_n**2)
+    z2 = (n * T2 + 6.0 - c_n) / denom_T2**0.5
+
+    Tm = max(z1, z2)
+
+    # P-value for Tm: P(Tm > t) = 1 - P(z1 <= t AND z2 <= t)
+    # Null correlation: rho = 24 / sqrt(4 * 8*(18+12c+c^2)) = 6/sqrt(2*(18+12c+c^2))
+    rho = 6.0 / (2.0 * (18.0 + 12.0 * c_n + c_n**2)) ** 0.5
+    cov_mat = np.array([[1.0, rho], [rho, 1.0]])
+    bvn_cdf = stats.multivariate_normal.cdf(
+        [Tm, Tm], mean=[0.0, 0.0], cov=cov_mat
+    )
+    pval_Tm = float(1.0 - bvn_cdf)
+
+    if not return_all:
+        return result_dict(float(Tm), pval_Tm)
+
+    pval_T1 = float(stats.norm.sf(z1))
+    pval_T2 = float(stats.norm.sf(z2))
+    return {
+        "T1": result_dict(float(z1), pval_T1),
+        "T2": result_dict(float(z2), pval_T2),
+        "Tm": result_dict(float(Tm), pval_Tm),
+    }
+
+
+def xu_2023_sphericity_test(X, center=False):
+    r"""Xu-Zhou-Lin-Feng (2023) adjusted sphericity test for elliptical data.
+
+    Ellipticity-corrected version of the Chen-Zhang-Zhong (2010) sphericity
+    test, valid for arbitrary (n,p)-asymptotics under elliptical distributions.
+
+    Adjusted test statistic (p. 257)::
+
+        U_hat_{n,p} = sigma_hat_0^{-1}_{n,p} * p * (p*T_{2,n,p}/T_{3,n,p} - 1)
+
+    where:
+
+    * T_{2,n,p}  - CZZ location-invariant U-statistic estimating tr(Sigma^2).
+    * T_{3,n,p}  - 4th-order U-statistic estimating tr^2(Sigma)::
+
+          T_{3,n,p} = Y_tilde_2 - 2*Y_tilde_4 + Y_5
+
+      with Y_tilde_2 = sum_{i1!=i2} d_{i1}*d_{i2} / P2,
+           Y_tilde_4 = (sum_d*s_off - 2*sum_dR) / P3,
+           d_i = ||x_i||^2, P_k = n*(n-1)*...*(n-k+1).
+
+    * delta_{n,p} - 5th-order U-statistic (kurtosis correction)::
+
+          delta_{n,p} = Y_6 - 4*Y_7 + 2*Y_8 + 4*Y_4 - 3*Y_5
+
+      with Y_6 = sum_i d_i^2 / n,
+           Y_7 = sum_i d_i*R_i / P2,  R_i = sum_{j!=i} x_i'x_j,
+           Y_8 = Y_tilde_4.
+
+    * sigma_hat_0^2 = 2*n^{-2}*p^2*{3*(p/(p+2))^2*delta^2/T_3^2 - 1}
+                    - 4*n^{-2}*p^2*{(p/(p+2))*delta/T_3 - 1}
+
+    Under H0, U_hat -> N(0,1) for any (n,p) with p -> inf as n -> inf,
+    under elliptical distributions.  The CZZ test (czz_sphericity_test) has
+    inflated type-I error for elliptical data with excess kurtosis kappa>1;
+    this test corrects for that.  The test is right-tailed.
+
+    Parameters
+    ----------
+    X : array-like (n, p)
+        Data matrix; n rows are observations, p columns are variables.
+        Requires n >= 5.
+    center : bool, default False
+        The U-statistics are location-invariant without centering.
+        Set True to explicitly subtract column means first.
+
+    Returns
+    -------
+    dict with keys 'stat' (= U_hat) and 'p_value'.
+
+    References
+    ----------
+    .. [1] Xu, G., Zhou, C., Lin, S., & Feng, Y. (2023). "Adjusted
+           covariance matrix U-tests for elliptically distributed data."
+           Scandinavian Journal of Statistics, 52, 249-269.
+    """
+    X = validate_data_matrix(X)
+    n, p = X.shape
+
+    if n < 5:
+        raise ValueError(
+            "Xu (2023) test requires n >= 5 (5th-order U-statistic)."
+        )
+
+    if center:
+        X = X - X.mean(axis=0, keepdims=True)
+
+    _, d, R, s_off, sumsq_off, sum_R2, sum_d, sum_d_sq, sum_dR = (
+        _gram_aggregates(X)
+    )
+
+    P2 = n * (n - 1)
+    P3 = P2 * (n - 2)
+    P4 = P3 * (n - 3)
+
+    # ---- CZZ Y-statistics ------------------------------------------------
+    Y2 = sumsq_off / P2
+    Y4 = (sum_R2 - sumsq_off) / P3
+    Y5 = (s_off**2 - 4.0 * sum_R2 + 2.0 * sumsq_off) / P4
+
+    # CZZ estimators of tr(Sigma) and tr(Sigma^2)
+    T1 = sum_d / n - s_off / P2
+    T2 = Y2 - 2.0 * Y4 + Y5
+
+    if T1 <= 0:
+        raise ValueError(
+            "Nonpositive T1 (estimator of tr(Sigma)); check data quality."
+        )
+
+    # ---- Y_tilde statistics (use squared norms d_i) ----------------------
+    # Y_tilde_2 = sum_{i1 != i2} d_{i1}*d_{i2} / P2
+    Ytilde2 = (sum_d**2 - sum_d_sq) / P2
+
+    # Y_tilde_4 = sum_{i1,i2,i3 all distinct} d_{i1}*G_{i2,i3} / P3
+    #           = (sum_d * s_off - 2 * sum_dR) / P3
+    Ytilde4 = (sum_d * s_off - 2.0 * sum_dR) / P3
+
+    # T3 = Y_tilde_2 - 2*Y_tilde_4 + Y5  (estimator of tr^2(Sigma))
+    T3 = Ytilde2 - 2.0 * Ytilde4 + Y5
+
+    if T3 <= 0:
+        raise ValueError(
+            "Nonpositive T3 (estimator of tr^2(Sigma)); cannot proceed."
+        )
+
+    # ---- Y_6, Y_7, Y_8 for delta (5th-order U-statistic) ----------------
+    # Y_6 = (1/n) * sum_i d_i^2
+    Y6 = sum_d_sq / n
+
+    # Y_7 = sum_{i1 != i2} d_{i1} * G_{i1,i2} / P2  = sum_dR / P2
+    Y7 = sum_dR / P2
+
+    # Y_8 = Y_tilde_4 (same quantity, re-used)
+    Y8 = Ytilde4
+
+    # delta_{n,p}
+    delta = Y6 - 4.0 * Y7 + 2.0 * Y8 + 4.0 * Y4 - 3.0 * Y5
+
+    q = p / (p + 2.0)  # = p/(p+2)
+    r = delta / T3  # ratio delta/T3
+
+    sigma_sq_0 = 2.0 / (n**2) * p**2 * (
+        3.0 * q**2 * r**2 - 1.0
+    ) - 4.0 / (n**2) * p**2 * (q * r - 1.0)
+
+    if sigma_sq_0 <= 0:
+        raise ValueError(
+            f"sigma_hat_0^2 = {sigma_sq_0:.6g} <= 0; kurtosis correction "
+            "is invalid for this dataset."
+        )
+
+    sigma_0 = sigma_sq_0**0.5
+
+    U_hat = (p / sigma_0) * (p * T2 / T3 - 1.0)
+    pval = float(stats.norm.sf(U_hat))  # right-tailed
+    return result_dict(float(U_hat), pval)

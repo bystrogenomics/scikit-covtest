@@ -7,10 +7,14 @@ from covtest.methods.hypothesis_spherical import (
     _U_tensor,
     bartlett_sphericity_test,
     czz_sphericity_test,
+    fisher_2010_sphericity_test,
     hallin_rank_sphericity_test,
+    hu_2019_sphericity_test,
     john_sphericity,
     sk_test,
     srivastava_2005_sphericity,
+    srivastava_2014_sphericity_test,
+    xu_2023_sphericity_test,
 )
 
 
@@ -101,8 +105,12 @@ def test_non_spherical_data_gives_signal(non_spherical_data):
     sk_res = sk_test(non_spherical_data)
     hl_res1 = hallin_rank_sphericity_test(non_spherical_data, method="wilcoxon")
     hl_res2 = hallin_rank_sphericity_test(non_spherical_data, method="vdw")
-    sk_res = sk_test(non_spherical_data)
     czz_res = czz_sphericity_test(non_spherical_data)
+    sriv_14_res = srivastava_2014_sphericity_test(non_spherical_data)
+    fish_10_res = fisher_2010_sphericity_test(non_spherical_data)
+    hu_19_res = hu_2019_sphericity_test(non_spherical_data)
+    xu_23_res = xu_2023_sphericity_test(non_spherical_data)
+
     # Expect evidence against null, so p-value should not be 1
     thresh = 0.1
     assert john_res["p_value"] < thresh
@@ -110,3 +118,76 @@ def test_non_spherical_data_gives_signal(non_spherical_data):
     assert hl_res1["p_value"] < thresh
     assert hl_res2["p_value"] < thresh
     assert czz_res["p_value"] < thresh
+    assert sriv_14_res["p_value"] < thresh
+    assert fish_10_res["p_value"] < thresh
+    assert hu_19_res["p_value"] < thresh
+    assert xu_23_res["p_value"] < thresh
+
+
+def test_srivastava_2014_output(identity_data):
+    res = srivastava_2014_sphericity_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+
+def test_srivastava_2014_rejects_small_N():
+    X = np.random.normal(size=(3, 2))
+    with pytest.raises(ValueError, match="requires N >= 4"):
+        srivastava_2014_sphericity_test(X)
+
+
+def test_fisher_2010_output(identity_data):
+    res = fisher_2010_sphericity_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+    res_no_center = fisher_2010_sphericity_test(identity_data, center=False)
+    assert set(res_no_center.keys()) == {"stat", "p_value"}
+    assert isinstance(res_no_center["stat"], float)
+    assert 0 <= res_no_center["p_value"] <= 1
+
+
+def test_fisher_2010_rejects_small_N():
+    X = np.random.normal(size=(7, 2))
+    with pytest.raises(ValueError, match="requires N >= 8"):
+        fisher_2010_sphericity_test(X)
+
+
+def test_hu_2019_output(identity_data):
+    res = hu_2019_sphericity_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+    res_all = hu_2019_sphericity_test(identity_data, return_all=True)
+    assert set(res_all.keys()) == {"T1", "T2", "Tm"}
+    for key in ("T1", "T2", "Tm"):
+        assert set(res_all[key].keys()) == {"stat", "p_value"}
+        assert isinstance(res_all[key]["stat"], float)
+        assert 0 <= res_all[key]["p_value"] <= 1
+
+
+def test_hu_2019_rejects_small_n():
+    X = np.random.normal(size=(1, 2))
+    with pytest.raises(ValueError, match="requires n >= 2"):
+        hu_2019_sphericity_test(X)
+
+
+def test_xu_2023_output(identity_data):
+    res = xu_2023_sphericity_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+    res_center = xu_2023_sphericity_test(identity_data, center=True)
+    assert set(res_center.keys()) == {"stat", "p_value"}
+    assert isinstance(res_center["stat"], float)
+    assert 0 <= res_center["p_value"] <= 1
+
+
+def test_xu_2023_rejects_small_n():
+    X = np.random.normal(size=(4, 2))
+    with pytest.raises(ValueError, match="requires n >= 5"):
+        xu_2023_sphericity_test(X)

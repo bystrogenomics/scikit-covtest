@@ -106,6 +106,7 @@ def test_proportionality_lz_regularization_numerical_stability():
 def test_ahmad_2022_helpers():
     """Test the estimators in _ahmad2022.py module directly."""
     from covtest.methods import _ahmad2022 as ahmad2022
+
     rng = np.random.default_rng(42)
     X1 = rng.standard_normal((50, 10))
     X2 = rng.standard_normal((60, 10))
@@ -127,5 +128,6 @@ def test_ahmad_2022_helpers():
         ahmad2022.estimate_Ei_trSigma2(np.ones((3, 10)))
 
     with pytest.raises(ValueError, match="same number of features"):
-        ahmad2022.estimate_E12_trSigma1Sigma2(np.ones((10, 5)), np.ones((10, 6)))
-
+        ahmad2022.estimate_E12_trSigma1Sigma2(
+            np.ones((10, 5)), np.ones((10, 6))
+        )

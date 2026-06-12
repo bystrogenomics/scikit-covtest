@@ -1,10 +1,9 @@
 # test_pval_plots.py
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-plt.show = lambda *args, **kwargs: None
 import numpy as np
 import pytest
+
 
 # Import your plotting functions
 from covtest.plotting.null import (
@@ -19,6 +18,9 @@ from covtest.plotting.null import (
     plot_pval_zdist,
     plot_pvalue_diagnostics_grid,
 )
+
+plt.show = lambda *args, **kwargs: None
+matplotlib.use("Agg")
 
 
 @pytest.fixture

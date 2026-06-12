@@ -1,15 +1,17 @@
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-plt.show = lambda *args, **kwargs: None
 import numpy as np
 import pandas as pd
+
 from covtest.testing.timing import (
     benchmark_computation_dimension,
     benchmark_computation_sample_size,
     plot_computation_dimension,
     plot_computation_sample_size,
 )
+
+matplotlib.use("Agg")
+plt.show = lambda *args, **kwargs: None
 
 
 def dummy_method(X):
