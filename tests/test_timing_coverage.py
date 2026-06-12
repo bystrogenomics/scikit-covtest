@@ -1,4 +1,7 @@
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+plt.show = lambda *args, **kwargs: None
 import numpy as np
 import pandas as pd
 from covtest.testing.timing import (
