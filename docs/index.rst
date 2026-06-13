@@ -59,7 +59,10 @@ User guide
    :maxdepth: 2
    :caption: User guide
 
+   user_guide/methods
    user_guide/multiple_testing
+   user_guide/diagnostics
+   user_guide/simulation
 
 API reference
 -------------
