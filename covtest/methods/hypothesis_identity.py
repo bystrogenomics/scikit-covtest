@@ -378,6 +378,8 @@ def srivastava_2014_identity(X):
     """
     X = validate_data_matrix(X)
     N, p = X.shape
+    if N < 4:
+        raise ValueError("Srivastava (2014) test requires N >= 4.")
     n = N - 1  # paper's n = N − 1
 
     a1 = sya.a_1_hat(X)
@@ -572,7 +574,6 @@ def ahmad_2017_identity(Xs):
     # ── pooled estimators ─────────────────────────────────────────────────
     sum_Q = sum(Qs)
     C1 = sum(Qs[i] * Bs[i] for i in range(g)) / sum_Q
-
 
     P_star_Q = 0.0
     C3_num = 0.0
