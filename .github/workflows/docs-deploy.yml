@@ -29,9 +29,19 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Install system dependencies (Pandoc)
+        run: |
+          if find . -name "*.ipynb" -not -path "*/.*" | grep -q .; then
+            echo "Jupyter notebooks found. Installing pandoc..."
+            sudo apt-get update && sudo apt-get install -y pandoc
+          else
+            echo "No Jupyter notebooks found. Skipping pandoc installation."
+          fi
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
+          # Check for documentation requirements files
           if [ -f docs/requirements.txt ]; then
             pip install -r docs/requirements.txt
           elif [ -f requirements.txt ]; then
@@ -39,6 +49,13 @@ jobs:
           else
             pip install sphinx sphinx-rtd-theme
           fi
+
+          # If notebooks exist, make sure nbsphinx and ipykernel are installed
+          if find . -name "*.ipynb" -not -path "*/.*" | grep -q .; then
+            pip install nbsphinx ipykernel
+          fi
+
+          # Install the package in editable mode
           if [ -f pyproject.toml ] || [ -f setup.py ]; then
             pip install -e .
           fi
