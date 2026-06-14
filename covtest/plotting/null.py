@@ -504,3 +504,4 @@ def plot_pvalue_diagnostics_grid(pvals, n_bins=10, sname=None):
     if sname is not None:
         plt.savefig(sname)
     plt.show()
+    return fig
