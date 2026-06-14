@@ -13,7 +13,7 @@ from . import _flurry_1986 as flurry1986
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
 from . import _ahmad2022 as ahmad2022
-from .utils import validate_data_matrix
+from .utils import validate_data_matrix, validate_matching_data_matrices
 
 ArrayLike = np.ndarray
 
@@ -210,7 +210,7 @@ def bartlett_adjusted_proportionality_test(
 
 
 def proportionality_test_LZ(X, Y, regularize=0.0):
-    """
+    r"""
     Liu–Xu–Zheng–Tian (2014) proportionality test for two covariance matrices.
 
     Parameters
@@ -528,68 +528,31 @@ def proportionality_plrt(X, Y, dist_moments="gaussian"):
 def proportional_cov_test_tsukuda(
     X: np.ndarray, Y: np.ndarray, single_side: bool = True
 ) -> Dict[str, float]:
-    r"""
-    High-dimensional test of proportional covariance matrices:
+    """Tsukuda & Matsuura (2019) test of proportional covariance matrices.
 
-        H0: Sigma_x = k * Sigma_y for some k > 0
-        H1: Sigma_x is not proportional to Sigma_y
-
-    This implements the trace-based statistic of Tsukuda and Matsuura (2019),
-    valid when p can exceed m and n, with m, n on the order of p**delta for
-    delta in (1/2, 1). The statistic is
-
-        T = (m*n / (m + n)) * [ a_x2 / a_x1**2 + a_y2 / a_y1**2
-                                 - 2 * a_xy / (a_x1 * a_y1) ],
-
-    where
-      - a_x1 = tr(Sx)/p
-      - a_y1 = tr(Sy)/p
-      - a_xy = tr(Sx * Sy)/p
-      - a_x2 and a_y2 are unbiased estimates of tr(Sigma_x^2)/p and tr(Sigma_y^2)/p
-
-    The asymptotic variance factor is estimated by
-
-        b_hat^2 = [ m**2/(m**2 + n**2) ] * (a_x2 / a_x1**2)
-                + [ n**2/(m**2 + n**2) ] * (a_y2 / a_y1**2).
-
-    We report Z = T / (2 * b_hat), which is approximately N(0, 1) under H0
-    (one-sided test rejects for large positive Z). We also report a two-sided
-    p-value for convenience.
+    Tests H0: Sigma_x = k * Sigma_y for some k > 0 against H1: Sigma_x is not proportional to Sigma_y.
 
     Parameters
     ----------
-    X : array-like, shape (m, p)
-        Sample 1 (rows are observations).
-    Y : array-like, shape (n, p)
-        Sample 2 (rows are observations).
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    single_side : bool, default=True
+        If True, returns one-sided upper-tail p-value; otherwise two-sided.
 
     Returns
     -------
-    dict
-        {
-          "stat": float,                      # standardized statistic
-          "p_value": float,
-        }
-
-    Notes
-    -----
-    - tr(Sigma^2)/p is estimated with the unbiased closed form of
-      Srivastava, Yanagihara, and Kubokawa (2014), Eq. (2.5), computed
-      from centered data and the scatter matrix V and diagonal matrix D.
-    - Since Sx and Sy are independent unbiased estimators of Sigma_x and
-      Sigma_y, tr(Sx * Sy) is an unbiased estimator of tr(Sigma_x * Sigma_y).
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The standardized test statistic.
+        - 'p_value' : float
+            The computed p-value.
     """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-    if X.ndim != 2 or Y.ndim != 2:
-        raise ValueError("X and Y must be 2D arrays (observations × features).")
-    m, pX = X.shape
-    n, pY = Y.shape
-    if pX != pY:
-        raise ValueError(
-            "X and Y must have the same number of columns (same p)."
-        )
-    p = pX
+    X, Y = validate_matching_data_matrices(X, Y)
+    m, p = X.shape
+    n, _ = Y.shape
     if m < 4 or n < 4:
         raise ValueError(
             "Each group must have at least 4 observations (for unbiased tr(Sigma^2))."
@@ -628,45 +591,42 @@ def proportional_cov_test_tsukuda(
     return {"stat": float(Z), "p_value": float(p_value)}
 
 
-def ahmad_2022_proportionality_test(X1, X2, alternative="two-sided"):
-    """
-    Ahmad (2022) proportionality test H0: Sigma1 = delta Sigma2.
+def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
+    """Ahmad (2022) proportionality test of two covariance matrices.
 
-    Test statistic:
-        T_hat = E12 / sqrt(E1 * E2) - 1
-    Null limit:
-        sqrt(n1*n2) * T_hat -> N(0,1) under H0.
+    Tests H0: Sigma_1 = delta * Sigma_2 for some delta > 0.
 
     Parameters
     ----------
-    X1 : ndarray, shape (n1_samples, n_features)
-    X2 : ndarray, shape (n2_samples, n_features)
-    alternative : {"two-sided", "greater", "less"}
-        - "two-sided": p = 2 * (1 - Phi(abs(z)))
-        - "greater":   p = 1 - Phi(z)
-        - "less":      p = Phi(z)
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    alternative : {"two-sided", "greater", "less"}, default="two-sided"
+        Alternative hypothesis formulation.
 
     Returns
     -------
-    result : dict with keys
-        - "stat"
-        - "T_hat"
-        - "z"
-        - "p_value"
-        - "E1", "E2", "E12"
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The standardized test statistic.
+        - 'p_value' : float
+            The computed p-value.
+        - 'T_hat' : float
+            The unstandardized test statistic.
+        - 'z' : float
+            Identical to 'stat'.
+        - 'E1', 'E2', 'E12' : floats
+            Trace estimates.
     """
-    X1 = ahmad2022._validate_matrix(X1)
-    X2 = ahmad2022._validate_matrix(X2)
-    n1, p1 = X1.shape
-    n2, p2 = X2.shape
-    if p1 != p2:
-        raise ValueError(
-            "X1 and X2 must have the same number of features (columns)."
-        )
+    X, Y = validate_matching_data_matrices(X, Y)
+    n1, p = X.shape
+    n2, _ = Y.shape
 
-    E1 = ahmad2022.estimate_Ei_trSigma2(X1)
-    E2 = ahmad2022.estimate_Ei_trSigma2(X2)
-    E12 = ahmad2022.estimate_E12_trSigma1Sigma2(X1, X2)
+    E1 = ahmad2022.estimate_Ei_trSigma2(X)
+    E2 = ahmad2022.estimate_Ei_trSigma2(Y)
+    E12 = ahmad2022.estimate_E12_trSigma1Sigma2(X, Y)
 
     if E1 <= 0 or E2 <= 0:
         raise ValueError(
