@@ -17,6 +17,7 @@ from covtest.methods.hypothesis_identity import (
     chen_2010_identity,
     xu_2023_identity,
     ahmad_2017_identity,
+    test_identity_T2 as identity_T2_test,
 )
 
 
@@ -188,3 +189,17 @@ def test_ahmad_2017_identity(identity_data):
     X_bad = rng.normal(size=(50, 4))
     with pytest.raises(ValueError, match="same number of features p"):
         ahmad_2017_identity([X1, X_bad])
+
+
+def test_identity_T2_outputs(identity_data, non_identity_data):
+    res = identity_T2_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert 0 <= res["p_value"] <= 1
+
+    res_alt = identity_T2_test(non_identity_data)
+    assert res_alt["p_value"] < 1
+
+    # Check short sample validation
+    short_data = np.random.default_rng(42).normal(size=(1, 5))
+    with pytest.raises(ValueError, match="Need n >= 2 samples."):
+        identity_T2_test(short_data)
