@@ -739,31 +739,9 @@ def cai_2013_two_sample(X: np.ndarray, Y: np.ndarray) -> dict:
     test_result : dict
         Test statistic and p-value.
     """
-    n1, p = X.shape
-    n2 = Y.shape[0]
+    res = cai_liu_xia_2013_two_sample_test(X, Y)
+    return result_dict(res["t"], res["p_value"])
 
-    W1 = X - np.mean(X, axis=0)
-    W2 = Y - np.mean(Y, axis=0)
-
-    S1 = np.dot(W1.T, W1) / n1
-    S2 = np.dot(W2.T, W2) / n2
-
-    Theta1 = np.zeros((p, p))
-    Theta2 = np.zeros((p, p))
-
-    for i in range(n1):
-        Theta1 += (1 / n1) * (np.outer(W1[i, :], W1[i, :]) - S1) ** 2
-    for i in range(n2):
-        Theta2 += (1 / n2) * (np.outer(W2[i, :], W2[i, :]) - S2) ** 2
-
-    W = (S1 - S2) / np.sqrt(Theta1 / n1 + Theta2 / n2)
-    M = W**2
-    M_n = np.max(M)
-
-    TSvalue = M_n - 4 * np.log(p) + np.log(np.log(p))
-    pvalue = 1 - np.exp(-1 / np.sqrt(8 * np.pi) * np.exp(-TSvalue / 2))
-
-    return result_dict(TSvalue, pvalue)
 
 
 def he_2018_two_sample(
@@ -939,15 +917,14 @@ def chang2016(
     if Y.shape[1] != p:
         raise ValueError("Different dimensions of X and Y.")
 
-    scalev = np.tile(np.concatenate([np.ones(n1) / n1, np.ones(n2) / n2]), J)
     Sx = np.cov(X, rowvar=False) * (n1 - 1) / n1
     Sy = np.cov(Y, rowvar=False) * (n2 - 1) / n2
 
     xa = X - np.mean(X, axis=0)
     ya = Y - np.mean(Y, axis=0)
 
-    vx = ((xa**2).T @ (xa**2)) / n1 - 2 / n1 * ((xa.T @ xa) * Sx) + Sx**2
-    vy = ((ya**2).T @ (ya**2)) / n2 - 2 / n2 * ((ya.T @ ya) * Sy) + Sy**2
+    vx = ((xa**2).T @ (xa**2)) / n1 - Sx**2
+    vy = ((ya**2).T @ (ya**2)) / n2 - Sy**2
 
     with np.errstate(invalid="ignore"):
         deno = np.sqrt(vx / n1 + vy / n2)
@@ -958,16 +935,20 @@ def chang2016(
     yat = ya.T / n2
     ts = np.zeros(J)
 
+    scale1 = np.ones(n1) / n1
+    scale2 = np.ones(n2) / n2
+    scalev = np.concatenate([scale1, scale2])
+
     rng = np.random.default_rng(seed)
     for j in range(J):
-        g = rng.standard_normal(n1 + n2)
-        scalev = np.concatenate([np.ones(n1) / n1, np.ones(n2) / n2])
-        g *= scalev
-        atmp = np.sum(g[:n1])
-        btmp = np.sum(g[n1:])
+        g = rng.standard_normal(n1 + n2) * scalev
+        g1 = g[:n1]
+        g2 = g[n1:]
+        atmp = np.sum(g1)
+        btmp = np.sum(g2)
 
-        ts1 = ((xa * g[:n1][:, np.newaxis]) - (xat.T * atmp)).T @ xa
-        ts2 = ((ya * g[n1:][:, np.newaxis]) - (yat.T * btmp)).T @ ya
+        ts1 = ((xa * g1[:, np.newaxis]) - (xat.T * atmp)).T @ xa
+        ts2 = ((ya * g2[:, np.newaxis]) - (yat.T * btmp)).T @ ya
 
         ts[j] = np.max(np.abs(ts1 - ts2) / deno)
 

@@ -56,7 +56,7 @@ from scipy.stats import norm
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
 from . import _ahmad2015 as ahmad2015
-from . import srivastava_yanagihara as sya
+from . import _srivastava_yanagihara as sya
 from . import _chen_xu_gram as cxg
 from .utils import (
     covariance_traces,

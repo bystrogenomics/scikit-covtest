@@ -6,7 +6,9 @@ from covtest.methods.hypothesis_two_sample import (
     _srivastava_2007_stat,
     _srivastava_yanagihara_stat,
     boxm_test,
+    cai_2013_two_sample,
     cai_liu_xia_2013_two_sample_test,
+    chang2016,
     chang_2017_perturbation_max_test,
     schott_2001,
     srivastava_two_sample_2007,
@@ -122,5 +124,19 @@ def test_chang_2017(data_two_groups):
     X1, X2 = data_two_groups
     res = chang_2017_perturbation_max_test(X1, X2, B=10)
     assert "Tmax" in res
+    assert 0 <= res["p_value"] <= 1
+
+
+def test_cai_2013_two_sample(data_two_groups):
+    X1, X2 = data_two_groups
+    res = cai_2013_two_sample(X1, X2)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert 0 <= res["p_value"] <= 1
+
+
+def test_chang2016(data_two_groups):
+    X1, X2 = data_two_groups
+    res = chang2016(X1, X2, J=10)
+    assert set(res.keys()) == {"stat", "p_value"}
     assert 0 <= res["p_value"] <= 1
 

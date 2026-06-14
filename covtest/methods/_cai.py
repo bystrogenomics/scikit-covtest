@@ -27,15 +27,10 @@ def _theta_hat_matrix(Xc, S_hat):
     Compute theta_hat_ij = (1/n) sum_k [ (Xki Xkj - S_hat_ij) ]^2
     using centered data Xc and S_hat = (1/n) Xc^T Xc.
 
-    This matches the paper's variance estimator in Section 2. :contentReference[oaicite:7]{index=7}
+    This matches the paper's variance estimator in Section 2.
     """
     n, p = Xc.shape
-    # For each k, we need outer product of row k: x_k x_k^T (p x p),
-    # then subtract S_hat and square elementwise, then average over k.
-    theta = np.zeros((p, p), dtype=float)
-    for k in range(n):
-        outer = np.outer(Xc[k], Xc[k])
-        diff = outer - S_hat
-        theta += diff * diff
-    theta /= n
-    return theta
+    Xsq = Xc * Xc
+    E_sq = (Xsq.T @ Xsq) / n
+    theta = E_sq - S_hat * S_hat
+    return np.maximum(theta, 0.0)
