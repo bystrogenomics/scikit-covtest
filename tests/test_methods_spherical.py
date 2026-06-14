@@ -15,6 +15,8 @@ from covtest.methods.hypothesis_spherical import (
     srivastava_2005_sphericity,
     srivastava_2014_sphericity_test,
     xu_2023_sphericity_test,
+    ahmad2015_sphericity_test,
+    muirhead_sphericity_lrt,
 )
 
 
@@ -191,3 +193,35 @@ def test_xu_2023_rejects_small_n():
     X = np.random.normal(size=(4, 2))
     with pytest.raises(ValueError, match="requires n >= 5"):
         xu_2023_sphericity_test(X)
+
+
+def test_ahmad2015_sphericity_test(identity_data, non_spherical_data):
+    res = ahmad2015_sphericity_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+    res_alt = ahmad2015_sphericity_test(non_spherical_data)
+    assert res_alt["p_value"] < 1
+
+
+def test_muirhead_sphericity_lrt(identity_data, non_spherical_data):
+    res = muirhead_sphericity_lrt(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert isinstance(res["stat"], float)
+    assert 0 <= res["p_value"] <= 1
+
+    res_alt = muirhead_sphericity_lrt(non_spherical_data)
+    assert res_alt["p_value"] < 1
+
+    # Check S-input variant
+    n, p = identity_data.shape
+    S = np.cov(identity_data, rowvar=False)
+    res_s = muirhead_sphericity_lrt(S=S, n=n)
+    assert set(res_s.keys()) == {"stat", "p_value"}
+    assert isinstance(res_s["stat"], float)
+    assert 0 <= res_s["p_value"] <= 1
+
+    # Validation error check
+    with pytest.raises(ValueError, match="Provide either X or S"):
+        muirhead_sphericity_lrt()

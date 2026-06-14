@@ -36,33 +36,32 @@ def _trace_estimators_from_gram(G: np.ndarray):
     return E1, E2, E3
 
 
-def _standardize_T(T: float, n: int, p: int, calibration: str = "auto"):
+def _standardize_T(T: float, n: int, p: int, calibration: str = "ahmad2015"):
     """
-    Standardize T into a z-score under the null.
+    Standardize an Ahmad/von Rosen (2015) T statistic under the null.
 
-    Two asymptotic calibrations from the two papers:
+    For both the Ahmad/von Rosen 2015 sphericity statistic T1 and
+    identity statistic T2, the null limit is:
 
-    1) "large_p_small_n": (n/2) * T -> N(0, 1)  (equivalently nT -> N(0, 4))
-       This is the regime emphasized in the non-normality note and also the c -> inf limit.
+        (n / 2) * T -> N(0, 1)
 
-    2) "ratio": nT -> N(0, 4*(1 + 2/c)) where c = p/n  (JSCS paper; p/n -> c in (0, inf))
+    Therefore the default z-score is:
 
-    "auto": use "large_p_small_n" if p > n, else "ratio".
+        z = (n / 2) * T
+
+    The old "large_p_small_n" name is retained as an alias. The "ratio"
+    calibration is explicit opt-in only, is not the Ahmad/von Rosen 2015
+    calibration, and is not selected by "auto".
     """
-    if calibration not in {"auto", "large_p_small_n", "ratio"}:
+    allowed = {"auto", "ahmad2015", "large_p_small_n", "ratio"}
+    if calibration not in allowed:
         raise ValueError(
-            "calibration must be one of: auto, large_p_small_n, ratio"
+            "calibration must be one of: auto, ahmad2015, large_p_small_n, ratio"
         )
 
-    if calibration == "auto":
-        calibration = "large_p_small_n" if p > n else "ratio"
+    if calibration in {"auto", "ahmad2015", "large_p_small_n"}:
+        return (n / 2.0) * T, "ahmad2015"
 
-    if calibration == "large_p_small_n":
-        z = (n / 2.0) * T
-        return z, calibration
-
-    # ratio calibration
     c = p / n
-    var_nT = 4.0 * (1.0 + 2.0 / c)  # = 4*(2/c + 1)
-    z = (n * T) / np.sqrt(var_nT)
-    return z, calibration
+    var_nT = 4.0 * (1.0 + 2.0 / c)
+    return (n * T) / np.sqrt(var_nT), "ratio"
