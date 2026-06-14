@@ -15,7 +15,7 @@ from .utils import (
 def ahmad2015_sphericity_test(
     X: np.ndarray,
     center: bool = True,
-    calibration: str = "auto",
+    calibration: str = "ahmad2015",
     tail: str = "upper",
 ):
     """Ahmad (2015) sphericity test.
@@ -28,8 +28,12 @@ def ahmad2015_sphericity_test(
         The input data matrix.
     center : bool, default=True
         If True, center the data by subtracting column means.
-    calibration : {"auto", "large_p_small_n", "ratio"}, default="auto"
+    calibration : {"ahmad2015", "auto", "large_p_small_n", "ratio"}, default="ahmad2015"
         Calibration method for computing the standardized z-score.
+        Under the null, Ahmad/von Rosen (2015) uses:
+            z = (n / 2) * T1
+        which is the "ahmad2015" (or "large_p_small_n" or "auto") calibration.
+        The "ratio" calibration is an explicit opt-in only, and is not the default.
     tail : {"upper", "two-sided"}, default="upper"
         Whether to calculate upper-tail or two-sided p-value.
 

@@ -17,6 +17,8 @@ from covtest.methods.hypothesis_identity import (
     chen_2010_identity,
     xu_2023_identity,
     ahmad_2017_identity,
+    test_identity_T2 as identity_T2_test,
+    identity_covariance_test,
 )
 
 
@@ -188,3 +190,90 @@ def test_ahmad_2017_identity(identity_data):
     X_bad = rng.normal(size=(50, 4))
     with pytest.raises(ValueError, match="same number of features p"):
         ahmad_2017_identity([X1, X_bad])
+
+
+def test_identity_T2_outputs(identity_data, non_identity_data):
+    res = identity_T2_test(identity_data)
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert 0 <= res["p_value"] <= 1
+
+    res_alt = identity_T2_test(non_identity_data)
+    assert res_alt["p_value"] < 1
+
+    # Check short sample validation
+    short_data = np.random.default_rng(42).normal(size=(1, 5))
+    with pytest.raises(ValueError, match="Need n >= 2 samples."):
+        identity_T2_test(short_data)
+
+
+def test_identity_covariance_test_public_interface(identity_data, non_identity_data):
+    # Standard single sample check
+    res = identity_covariance_test(identity_data, method="chen_2010")
+    assert set(res.keys()) == {"stat", "p_value"}
+    assert 0 <= res["p_value"] <= 1
+
+    # Verify that different methods work
+    for method in ["chen_2010", "ahmad2015", "xu_2023", "srivastava_2005", "srivastava_2011", "srivastava_2014", "ledoit_wolf", "nagao", "tyler", "fisher", "lrt"]:
+        res_m = identity_covariance_test(identity_data, method=method)
+        assert set(res_m.keys()) == {"stat", "p_value"}
+        assert 0 <= res_m["p_value"] <= 1
+
+    # Verify that passing multiple samples/lists raises ValueError (does not accept Xs)
+    with pytest.raises(ValueError):
+        identity_covariance_test([identity_data, identity_data])
+
+    # Check invalid method raises ValueError
+    with pytest.raises(ValueError, match="Unknown method"):
+        identity_covariance_test(identity_data, method="invalid_method_name")
+
+
+def test_covariance_under_null_behavior():
+    from covtest.methods.hypothesis_identity import _covariance_under_null
+
+    S = np.array([[2.0, 0.5], [0.5, 3.0]])
+
+    # 1. returns S when Sigma is "identity" or None
+    assert np.allclose(_covariance_under_null(S, "identity"), S)
+    assert np.allclose(_covariance_under_null(S, None), S)
+
+    # 2. returns S when Sigma is explicit identity matrix
+    assert np.allclose(_covariance_under_null(S, np.eye(2)), S)
+
+    # 3. returns Sigma^{-1/2} S Sigma^{-1/2} for diagonal Sigma
+    Sigma = np.array([[4.0, 0.0], [0.0, 9.0]])
+    inv_sqrt = np.array([[0.5, 0.0], [0.0, 1.0/3.0]])
+    expected = inv_sqrt @ S @ inv_sqrt
+    expected = 0.5 * (expected + expected.T)
+    assert np.allclose(_covariance_under_null(S, Sigma), expected)
+
+    # 4. non-positive-definite raises ValueError
+    non_pd = np.array([[1.0, 2.0], [2.0, 1.0]])
+    with pytest.raises(ValueError, match="must be positive definite"):
+        _covariance_under_null(S, non_pd)
+
+    # 5. shape mismatch raises ValueError
+    bad_shape = np.eye(3)
+    with pytest.raises(ValueError, match="same shape as S"):
+        _covariance_under_null(S, bad_shape)
+
+
+def test_srivastava_2011_pvalues_and_smoke(identity_data):
+    p = identity_data.shape[1]
+    res1 = srivastava2011_single_sample(identity_data, Sigma="identity")
+    res2 = srivastava2011_single_sample(identity_data, Sigma=np.eye(p))
+
+    assert np.isclose(res1["stat"], res2["stat"])
+    assert np.isclose(res1["p_value"], res2["p_value"])
+
+    # targeted calibration smoke test
+    rng = np.random.default_rng(0)
+    pvals = []
+    for _ in range(200):
+        X = rng.normal(size=(40, 100))
+        pvals.append(srivastava2011_single_sample(X, Sigma=np.eye(100))["p_value"])
+
+    pvals = np.array(pvals)
+    assert np.mean(pvals < 0.05) < 0.15
+    assert np.mean(pvals == 0.0) == 0.0
+
+

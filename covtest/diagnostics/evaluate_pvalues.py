@@ -201,7 +201,7 @@ def analyze_pvalues(p_values, num_permutations=1000, seed=42):
 
     # --- QQ Intercept and Slope ---
     expected = -np.log10(np.linspace(1 / (n + 1), 1, n))
-    observed = -np.log10(np.sort(p_values))
+    observed = -np.log10(np.clip(np.sort(p_values), np.finfo(float).tiny, 1.0))
     reg = LinearRegression().fit(expected.reshape(-1, 1), observed)
     intercept = reg.intercept_
     slope = reg.coef_[0]

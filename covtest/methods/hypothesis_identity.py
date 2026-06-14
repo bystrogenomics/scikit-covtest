@@ -2,10 +2,15 @@
 hypothesis_identity.py
 ======================
 
-Hypothesis tests for the identity covariance matrix H₀ : Σ = I.
+Hypothesis tests for checking whether a covariance matrix is identity.
 
-Tests implemented
------------------
+The primary public entry point for single-sample identity covariance testing is
+`identity_covariance_test`.
+
+1. Single-Sample Identity Tests (H0: Sigma = I_p)
+--------------------------------------------------
+All these tests take a single data matrix X of shape (n_samples, n_features):
+
 Classic / parametric (low-dimensional baseline):
   ledoit_wolf_identity   Ledoit & Wolf (2002)
   nagao_identity         Nagao (1973)
@@ -13,20 +18,25 @@ Classic / parametric (low-dimensional baseline):
 High-dimensional, one-sample, normality-assumed or robust:
   srivastava_2005_identity      Srivastava (2005)
   srivastava2011_single_sample  Srivastava, Kollo & von Rosen (2011)
-  srivastava_2014_identity      Srivastava, Yanagihara & Kubokawa (2014)  ← NEW
+  srivastava_2014_identity      Srivastava, Yanagihara & Kubokawa (2014)
   tyler_identity                Tyler (1987)
-  fisher_single_sample          Fisher (2012) – statistic T₂
+  fisher_single_sample          Fisher (2012) – statistic T2
   test_identity_T2              Ahmad & von Rosen (2015)
 
 High-dimensional, U-statistic / non-normal:
-  chen_2010_identity            Chen, Zhang & Zhong (2010)                ← NEW
-  xu_2023_identity              Xu et al. (2023 / 2025)                   ← NEW
-
-Multi-sample:
-  ahmad_2017_identity           Ahmad (2017) – g ≥ 2 populations          ← NEW
+  chen_2010_identity            Chen, Zhang & Zhong (2010)
+  xu_2023_identity              Xu et al. (2023 / 2025)
 
 LRT-based:
-  one_sample_cov_test
+  one_sample_cov_test           Likelihood Ratio Test
+
+2. Multi-Sample / Common-Covariance Tests (Internal / Advanced)
+----------------------------------------------------------------
+These tests are not omnibus tests of equality of covariance matrices. They generally
+assume covariance homogeneity and evaluate secondary hypotheses:
+
+  ahmad_2017_identity           Assumes Sigma_1 = ... = Sigma_g = Sigma,
+                                and tests whether the common Sigma = I_p.
 
 References
 ----------
@@ -89,13 +99,22 @@ def _nagao_stat(data):
 
 
 def _covariance_under_null(S, Sigma):
-    if isinstance(Sigma, str) and Sigma == "identity":
+    if Sigma is None or (isinstance(Sigma, str) and Sigma == "identity"):
         return S
-    sv = la.svd(Sigma)
-    svDf = la.svd(S)
-    sqrt_sv = np.diag(np.sqrt(sv[1]))
-    x_ = svDf[0] @ sqrt_sv @ la.inv(sv[0] @ sqrt_sv)
-    return x_.T @ x_
+
+    Sigma = np.asarray(Sigma, dtype=np.float64)
+    if Sigma.shape != S.shape:
+        raise ValueError("Sigma must have the same shape as S.")
+
+    Sigma = 0.5 * (Sigma + Sigma.T)
+    evals, evecs = la.eigh(Sigma)
+
+    if np.any(evals <= 0):
+        raise ValueError("Sigma must be positive definite.")
+
+    inv_sqrt = (evecs / np.sqrt(evals)) @ evecs.T
+    S0 = inv_sqrt @ S @ inv_sqrt
+    return 0.5 * (S0 + S0.T)
 
 
 def _fisher_2012_stat_(n, p, S_):
@@ -137,7 +156,7 @@ def _srivastava2011_(n, p, S_):
 def test_identity_T2(
     X: np.ndarray,
     center: bool = True,
-    calibration: str = "auto",
+    calibration: str = "ahmad2015",
     tail: str = "upper",
 ):
     """Ahmad & von Rosen (2015) T2 test for identity covariance matrix.
@@ -150,8 +169,12 @@ def test_identity_T2(
         The input data matrix.
     center : bool, default=True
         If True, center the data by subtracting column means.
-    calibration : {"auto", "large_p_small_n", "ratio"}, default="auto"
+    calibration : {"ahmad2015", "auto", "large_p_small_n", "ratio"}, default="ahmad2015"
         Calibration method for computing the z-statistic.
+        Under the null, Ahmad/von Rosen (2015) uses:
+            z = (n / 2) * T2
+        which is the "ahmad2015" (or "large_p_small_n" or "auto") calibration.
+        The "ratio" calibration is an explicit opt-in only, and is not the default.
     tail : {"upper", "two-sided"}, default="upper"
         Whether to calculate upper-tail or two-sided p-value.
 
@@ -391,7 +414,13 @@ def fisher_single_sample(X, Sigma="identity"):
 def srivastava2011_single_sample(X, Sigma="identity"):
     """Srivastava (2011) test for covariance matrix structure.
 
-    Tests H0: Sigma = Sigma0.
+    Tests the null hypothesis H0: Sigma = Sigma0, where Sigma0 defaults to 
+    the identity matrix (Sigma0 = I_p). Note that Sigma="identity" and 
+    Sigma=np.eye(p) are equivalent.
+
+    Rejection is based on large positive values of the test statistic. Thus,
+    this function returns an upper-tail p-value. It expects a single sample 
+    data matrix X, not multiple groups.
 
     Parameters
     ----------
@@ -407,7 +436,7 @@ def srivastava2011_single_sample(X, Sigma="identity"):
         - 'stat' : float
             The computed test statistic.
         - 'p_value' : float
-            The computed p-value.
+            The computed p-value (upper-tail).
 
     References
     ----------
@@ -421,7 +450,7 @@ def srivastava2011_single_sample(X, Sigma="identity"):
     S_ = _covariance_under_null(S, Sigma)
 
     statistic = _srivastava2011_(n - 1, p, S_)
-    p_value = 2 * (1 - norm.cdf(abs(statistic)))
+    p_value = float(norm.sf(statistic))
 
     return result_dict(statistic, p_value)
 
@@ -646,8 +675,11 @@ def ahmad_2017_identity(Xs):
     """
     Ahmad (2017) multi-sample test for a common identity covariance matrix.
 
-    Tests H₀: Σ₁ = Σ₂ = … = Σ_g = I (identity) across g ≥ 2 independent
-    populations, using pooled location-invariant U-statistic estimators.
+    .. warning::
+       [INTERNAL / ADVANCED] This method is not an omnibus test of H0: Sigma_i = I
+       under heterogeneous alternatives. It requires g >= 2 and assumes a common 
+       covariance matrix across groups (covariance homogeneity), testing whether 
+       this common covariance is identity.
 
     The test statistic is (equations 5 and 22–23 of the paper):
 
@@ -661,7 +693,8 @@ def ahmad_2017_identity(Xs):
     and Bᵢ = tr(Sᵢ) (trace of sample covariance of population i),
     Bᵢⱼ = tr(SᵢSⱼ) (cross-trace of sample covariances).
 
-    Under H₀ (Theorem 5 of the paper):  √(P*/4) · T_b →ᴅ N(0, 1)
+    Under H₀ (Theorem 5 of the paper):  Values standardise to a standard normal:
+    stat = sqrt(P*/4) * T_b -> N(0, 1)
 
     where P* = Σᵢ≠ⱼ Q(nᵢ)·Q(nⱼ) and Q(nᵢ) = nᵢ(nᵢ-1).
 
@@ -731,3 +764,80 @@ def ahmad_2017_identity(Xs):
     stat = float(np.sqrt(P_n / 4.0) * T_b)
     p_value = float(norm.sf(stat))
     return result_dict(stat, p_value)
+
+
+def identity_covariance_test(X, method="chen_2010", **kwargs):
+    """Clean public wrapper for single-sample identity covariance test.
+
+    Tests the null hypothesis:
+        H0: Sigma = I_p
+    for a single sample data matrix X, against non-identity covariance alternatives.
+
+    Note: This is NOT a test for equality of covariance matrices across multiple groups.
+    For multi-sample tests, please refer to the two-sample or proportionality testing modules.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    method : str, default="chen_2010"
+        The test method to apply. Must be one of:
+        - "chen_2010": Chen, Zhang & Zhong (2010) high-dimensional U-statistic test.
+        - "ahmad2015": Ahmad & von Rosen (2015) T2 test using U-statistics.
+        - "xu_2023": Xu et al. (2023) elliptically-adjusted identity test.
+        - "srivastava_2005": Srivastava (2005) high-dimensional test.
+        - "srivastava_2011": Srivastava, Kollo & von Rosen (2011) test.
+        - "srivastava_2014": Srivastava, Yanagihara & Kubokawa (2014) test.
+        - "ledoit_wolf": Ledoit & Wolf (2002) test.
+        - "nagao": Nagao (1973) test.
+        - "tyler": Tyler (1987) distribution-free test.
+        - "fisher": Fisher (2012) test.
+        - "lrt": Likelihood ratio test.
+    **kwargs : dict
+        Additional arguments passed to the underlying test function.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The standardized test statistic.
+        - 'p_value' : float
+            The computed p-value (upper-tail).
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.normal(size=(100, 30))
+    >>> result = identity_covariance_test(X)
+    >>> print(result["stat"], result["p_value"])
+    """
+    methods_map = {
+        "chen_2010": chen_2010_identity,
+        "ahmad2015": test_identity_T2,
+        "xu_2023": xu_2023_identity,
+        "srivastava_2005": srivastava_2005_identity,
+        "srivastava_2011": srivastava2011_single_sample,
+        "srivastava_2014": srivastava_2014_identity,
+        "ledoit_wolf": ledoit_wolf_identity,
+        "nagao": nagao_identity,
+        "tyler": tyler_identity,
+        "fisher": fisher_single_sample,
+        "lrt": one_sample_cov_test,
+    }
+
+    if method not in methods_map:
+        raise ValueError(
+            f"Unknown method '{method}'. Must be one of: {list(methods_map.keys())}"
+        )
+
+    res = methods_map[method](X, **kwargs)
+
+    stat = res.get("stat", res.get("z_value", res.get("lrt", np.nan)))
+    p_value = res.get("p_value", np.nan)
+
+    return {
+        "stat": float(stat),
+        "p_value": float(p_value),
+    }
+
