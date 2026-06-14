@@ -225,3 +225,62 @@ def test_muirhead_sphericity_lrt(identity_data, non_spherical_data):
     # Validation error check
     with pytest.raises(ValueError, match="Provide either X or S"):
         muirhead_sphericity_lrt()
+
+
+def test_standardize_T_values():
+    from covtest.methods._ahmad2015 import _standardize_T
+
+    # Test values: T=0.01, n=1000, p=80
+    # Expected: z = (n / 2.0) * T = (1000 / 2) * 0.01 = 5.0
+    z_auto, cal_auto = _standardize_T(T=0.01, n=1000, p=80, calibration="auto")
+    assert np.isclose(z_auto, 5.0)
+    assert cal_auto == "ahmad2015"
+
+    z_ahmad, cal_ahmad = _standardize_T(
+        T=0.01, n=1000, p=80, calibration="ahmad2015"
+    )
+    assert np.isclose(z_ahmad, 5.0)
+    assert cal_ahmad == "ahmad2015"
+
+    z_large, cal_large = _standardize_T(
+        T=0.01, n=1000, p=80, calibration="large_p_small_n"
+    )
+    assert np.isclose(z_large, 5.0)
+    assert cal_large == "ahmad2015"
+
+    # Verify ratio calibration is only when explicitly requested
+    z_ratio, cal_ratio = _standardize_T(
+        T=0.01, n=1000, p=80, calibration="ratio"
+    )
+    # For ratio: c = p/n = 80/1000 = 0.08
+    # var_nT = 4.0 * (1.0 + 2.0 / c) = 4 * (1 + 25) = 104
+    # Expected: (n * T) / sqrt(var_nT) = 10 / sqrt(104) = 0.98058
+    assert np.isclose(z_ratio, 10.0 / np.sqrt(104.0))
+    assert cal_ratio == "ratio"
+
+    # Verify invalid calibration raises ValueError
+    with pytest.raises(ValueError, match="calibration must be one of"):
+        _standardize_T(T=0.01, n=1000, p=80, calibration="invalid")
+
+
+def test_ahmad2015_sphericity_calibration_simulation():
+    rng = np.random.default_rng(42)
+    n, p = 1000, 80
+    num_reps = 100
+    z_scores = []
+
+    # Generate null data: standard Gaussian covariance = I
+    for _ in range(num_reps):
+        X = rng.normal(size=(n, p))
+        res = ahmad2015_sphericity_test(X, center=False, calibration="auto")
+        # Under null, (n/2)*T -> N(0,1)
+        T1 = res["stat"]
+        z = (n / 2.0) * T1
+        z_scores.append(z)
+
+    z_scores = np.array(z_scores)
+    z_std = np.std(z_scores)
+    # Check that z-statistics are not artificially compressed near zero
+    # Under the ratio calibration it would be compressed to ~0.2,
+    # under the correct calibration the standard deviation should be close to 1.0 (e.g. > 0.7)
+    assert z_std > 0.7

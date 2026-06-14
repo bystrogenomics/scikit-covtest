@@ -137,7 +137,7 @@ def _srivastava2011_(n, p, S_):
 def test_identity_T2(
     X: np.ndarray,
     center: bool = True,
-    calibration: str = "auto",
+    calibration: str = "ahmad2015",
     tail: str = "upper",
 ):
     """Ahmad & von Rosen (2015) T2 test for identity covariance matrix.
@@ -150,8 +150,12 @@ def test_identity_T2(
         The input data matrix.
     center : bool, default=True
         If True, center the data by subtracting column means.
-    calibration : {"auto", "large_p_small_n", "ratio"}, default="auto"
+    calibration : {"ahmad2015", "auto", "large_p_small_n", "ratio"}, default="ahmad2015"
         Calibration method for computing the z-statistic.
+        Under the null, Ahmad/von Rosen (2015) uses:
+            z = (n / 2) * T2
+        which is the "ahmad2015" (or "large_p_small_n" or "auto") calibration.
+        The "ratio" calibration is an explicit opt-in only, and is not the default.
     tail : {"upper", "two-sided"}, default="upper"
         Whether to calculate upper-tail or two-sided p-value.
 
