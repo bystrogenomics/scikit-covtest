@@ -1,4 +1,5 @@
 import numpy as np
+from . import _ahmad2017 as ahmad2017
 
 
 def _validate_matrix(X):
@@ -30,23 +31,7 @@ def estimate_Ei_trSigma2(X):
     if n < 4:
         raise ValueError("Need n >= 4 for Ei because of (n-2)(n-3) in nu_i.")
 
-    Xc = X - X.mean(axis=0, keepdims=True)
-
-    # Unbiased sample covariance: (1/(n-1)) Xc^T Xc
-    S = (Xc.T @ Xc) / (n - 1)
-
-    trS = float(np.trace(S))
-    trS2 = float(np.trace(S @ S))  # ||S||_F^2
-
-    # Qi = sum_k (||x_k - xbar||^2)^2 / (n - 1)
-    row_sqnorm = np.sum(Xc * Xc, axis=1)
-    Q = float(np.sum(row_sqnorm * row_sqnorm)) / (n - 1)
-
-    nu = (n - 1) / (n * (n - 2) * (n - 3))
-
-    # Eq. (10): Ei = nu * [ (n-1)(n-2)||S||_F^2 + (tr S)^2 - n*Q ]
-    Ei = nu * ((n - 1) * (n - 2) * trS2 + (trS * trS) - n * Q)
-    return Ei
+    return ahmad2017.estimate_Ei(X)
 
 
 def estimate_E12_trSigma1Sigma2(X1, X2):
@@ -74,10 +59,4 @@ def estimate_E12_trSigma1Sigma2(X1, X2):
     if n1 < 2 or n2 < 2:
         raise ValueError("Need n1 >= 2 and n2 >= 2 to form sample covariances.")
 
-    X1c = X1 - X1.mean(axis=0, keepdims=True)
-    X2c = X2 - X2.mean(axis=0, keepdims=True)
-
-    S1 = (X1c.T @ X1c) / (n1 - 1)
-    S2 = (X2c.T @ X2c) / (n2 - 1)
-
-    return float(np.trace(S1 @ S2))
+    return ahmad2017.estimate_E12(X1, X2)

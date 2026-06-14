@@ -56,7 +56,7 @@ from scipy.stats import norm
 from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
 from . import _ahmad2015 as ahmad2015
-from . import srivastava_yanagihara as sya
+from . import _srivastava_yanagihara as sya
 from . import _chen_xu_gram as cxg
 from .utils import (
     covariance_traces,
@@ -140,14 +140,31 @@ def test_identity_T2(
     calibration: str = "auto",
     tail: str = "upper",
 ):
-    """
-    Test H0: Sigma = I using T2 = (1/p)*E3 - (2/p)*E1 + 1.
+    """Ahmad & von Rosen (2015) T2 test for identity covariance matrix.
 
-    Ahmad & von Rosen (2015), equation (6).
+    Tests H0: Sigma = I using the T2 statistic based on U-statistics.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    center : bool, default=True
+        If True, center the data by subtracting column means.
+    calibration : {"auto", "large_p_small_n", "ratio"}, default="auto"
+        Calibration method for computing the z-statistic.
+    tail : {"upper", "two-sided"}, default="upper"
+        Whether to calculate upper-tail or two-sided p-value.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
     """
-    X = np.asarray(X, dtype=np.float64)
-    if X.ndim != 2:
-        raise ValueError("X must be a 2D array of shape (n, p).")
+    X = validate_data_matrix(X)
     n, p = X.shape
     if n < 2:
         raise ValueError("Need n >= 2 samples.")
@@ -180,9 +197,23 @@ def test_identity_T2(
 
 
 def ledoit_wolf_identity(X):
-    """Ledoit-Wolf test for identity covariance matrix.
+    """Ledoit-Wolf (2002) test for identity covariance matrix.
 
-    Tests H0: Sigma = I_p.
+    Tests H0: Sigma = I.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
 
     References
     ----------
@@ -198,9 +229,23 @@ def ledoit_wolf_identity(X):
 
 
 def nagao_identity(X):
-    """Nagao's test for identity covariance matrix.
+    """Nagao's (1973) test for identity covariance matrix.
 
-    Tests H0: Sigma = I_p.
+    Tests H0: Sigma = I.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
 
     References
     ----------
@@ -218,7 +263,21 @@ def nagao_identity(X):
 def srivastava_2005_identity(X):
     """Srivastava (2005) test for identity covariance matrix.
 
-    High-dimensional test for H0: Sigma = I_p.
+    High-dimensional test for H0: Sigma = I.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
 
     References
     ----------
@@ -234,7 +293,27 @@ def srivastava_2005_identity(X):
 
 
 def tyler_identity(X, unknown_mean=False, method="tr"):
-    """Tyler's M-estimator test for identity shape matrix.
+    """Tyler's (1987) M-estimator test for identity shape matrix.
+
+    Tests H0: Sigma = I.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    unknown_mean : bool, default=False
+        If True, robust location is estimated and subtracted from data.
+    method : {"tr", "log"}, default="tr"
+        Test statistic version to use (trace-based or log-based).
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
 
     References
     ----------
@@ -273,9 +352,25 @@ def tyler_identity(X, unknown_mean=False, method="tr"):
 
 
 def fisher_single_sample(X, Sigma="identity"):
-    """Fisher (2012) T₂ test for covariance matrix structure.
+    """Fisher (2012) T2 test for covariance matrix structure.
 
-    Tests H0: Sigma = Sigma0 using the T₂ statistic (a₄ − 2a₂ + 1).
+    Tests H0: Sigma = Sigma0.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    Sigma : {"identity"} or array-like of shape (n_features, n_features), default="identity"
+        The covariance matrix under the null hypothesis.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
 
     References
     ----------
@@ -296,6 +391,24 @@ def fisher_single_sample(X, Sigma="identity"):
 def srivastava2011_single_sample(X, Sigma="identity"):
     """Srivastava (2011) test for covariance matrix structure.
 
+    Tests H0: Sigma = Sigma0.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    Sigma : {"identity"} or array-like of shape (n_features, n_features), default="identity"
+        The covariance matrix under the null hypothesis.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
+
     References
     ----------
     Srivastava, M. S., Kollo, T. & von Rosen, D. (2011).
@@ -314,7 +427,32 @@ def srivastava2011_single_sample(X, Sigma="identity"):
 
 
 def one_sample_cov_test(X, mean=None, S=None):
-    """LRT-based high-dimensional identity covariance test."""
+    """LRT-based high-dimensional identity covariance test.
+
+    Tests H0: Sigma = Sigma0.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    mean : array-like of shape (n_features,), optional
+        The mean vector for adjusting the data. If None, the sample mean is used.
+    S : array-like of shape (n_features, n_features), optional
+        The covariance matrix under the null hypothesis. If None, the identity matrix
+        is assumed.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'p_value' : float
+            The p-value of the test.
+        - 'z_value' : float
+            The computed Z-value for the test.
+        - 'lrt' : float
+            The likelihood ratio test statistic.
+    """
+    X = validate_data_matrix(X)
     n, p = X.shape
     y = p / n
     N = n - 1
@@ -326,12 +464,12 @@ def one_sample_cov_test(X, mean=None, S=None):
 
     if mean is None:
         X = X - np.mean(X, axis=0)
-        S = X.T @ X / N
+        S_matrix = X.T @ X / N
     else:
         X = X - mean
-        S = X.T @ X / n
+        S_matrix = X.T @ X / n
 
-    lrt = np.sum(np.diag(S)) - np.log(la.det(S)) - p
+    lrt = np.sum(np.diag(S_matrix)) - np.log(la.det(S_matrix)) - p
     mu1 = -0.5 * np.log(1 - y)
     sigma1 = -2 * np.log(1 - y) - 2 * y
     z_value = (lrt - p * (1 + (1 - yN) / yN * np.log(1 - yN)) - mu1) / np.sqrt(

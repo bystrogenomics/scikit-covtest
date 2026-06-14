@@ -18,28 +18,31 @@ def ahmad2015_sphericity_test(
     calibration: str = "auto",
     tail: str = "upper",
 ):
-    """
-    Test H0: Sigma = sigma^2 I (sphericity) using T1 = p*E3/E2 - 1.
+    """Ahmad (2015) sphericity test.
+
+    Test H0: Sigma = sigma^2 I using T1 = p*E3/E2 - 1.
 
     Parameters
     ----------
-    X : array (n, p)
-        Rows are samples, columns are variables.
-    center : bool
-        If True, subtract column means before testing (recommended if mean is not known to be 0).
-    calibration : {"auto", "large_p_small_n", "ratio"}
-        See _standardize_T.
-    tail : {"upper", "two-sided"}
-        Population deviation measure is >= 0, so "upper" is the usual choice.
-        "two-sided" is available if you want a symmetric normal p-value.
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    center : bool, default=True
+        If True, center the data by subtracting column means.
+    calibration : {"auto", "large_p_small_n", "ratio"}, default="auto"
+        Calibration method for computing the standardized z-score.
+    tail : {"upper", "two-sided"}, default="upper"
+        Whether to calculate upper-tail or two-sided p-value.
 
     Returns
     -------
-    dict with keys: T1, z, pvalue, calibration, n, p, E1, E2, E3
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic T1.
+        - 'p_value' : float
+            The computed p-value.
     """
-    X = np.asarray(X, dtype=np.float64)
-    if X.ndim != 2:
-        raise ValueError("X must be a 2D array of shape (n, p).")
+    X = validate_data_matrix(X)
     n, p = X.shape
     if n < 2:
         raise ValueError("Need n >= 2 samples.")
@@ -254,12 +257,23 @@ def _U_tensor(X):
 
 
 def sk_test(X):
-    """
-    High-dimensional Kendall's tau–type sphericity test (SK), exact leave-one-out U-statistic.
-    Implements the estimator in Feng & Liu (2017) with an O(n^2 p^2) reduction.
+    """High-dimensional Kendall's tau-type sphericity test (SK).
 
-    Returns:
-        dict(statistic=Q, z=z, p_value=p)
+    Implements the leave-one-out U-statistic estimator from Feng & Liu (2017).
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic Q.
+        - 'p_value' : float
+            The computed p-value.
     """
     X = validate_data_matrix(X)
     n, p = X.shape
@@ -301,50 +315,31 @@ def muirhead_sphericity_lrt(
     center=True,
     use_bartlett_correction=True,
 ):
-    """
-    Muirhead LRT for H0: Sigma = sigma^2 * I_p (sigma^2 unknown), with Bartlett correction.
+    """Muirhead likelihood ratio test (LRT) for sphericity.
 
-    Statistic and calibration
-    -------------------------
-    W = det(S) / ( (tr(S)/p)^p )
-    T = -(n - 1) * rho * log(W)  approx  chi2_df  under H0
+    Tests H0: Sigma = sigma^2 * I_p (sigma^2 unknown) with optional Bartlett correction.
 
-    where:
-      - S is the sample covariance with denominator (n - 1)
-      - df = (p - 1) * (p + 2) / 2
-      - rho = 1 - (2*p*p + p + 2) / (6 * (n - 1) * p)  (Bartlett factor)
-      - If use_bartlett_correction is False, set rho = 1.
-
-    Inputs
-    ------
-    X : array-like (n, p), optional
-        Raw data. If provided, S is ignored.
-    S : array-like (p, p), optional
-        Sample covariance computed with denominator (n - 1). If provided, pass n.
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features), optional
+        The input data matrix. If provided, S is ignored.
+    S : array-like of shape (n_features, n_features), optional
+        Sample covariance matrix. If provided, pass n as well.
     n : int, optional
         Sample size used to compute S when S is provided.
-    center : bool, default True
-        If X is provided, subtract column means before covariance.
-    use_bartlett_correction : bool, default True
+    center : bool, default=True
+        If X is provided, subtract column means before computing covariance.
+    use_bartlett_correction : bool, default=True
         Whether to apply Bartlett small-sample correction.
 
     Returns
     -------
-    dict with keys:
-        W : float
-        logW : float
-        T : float                # chi-square statistic
-        df : int
-        p_value : float
-        rho : float
-        n, p : ints
-        sign_logdetS, logdetS, trS, t1 : diagnostics
-
-    Notes
-    -----
-    The LRT requires S to be positive definite. In practice this needs p < n
-    for sample covariance of full-rank data. If S is singular, the test is not
-    defined (logdet is -inf).
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            Chi-square test statistic.
+        - 'p_value' : float
+            P-value from chi-square distribution.
     """
     if X is None and S is None:
         raise ValueError("Provide either X or S.")
@@ -353,8 +348,6 @@ def muirhead_sphericity_lrt(
 
     if X is not None:
         X = validate_data_matrix(X)
-        if X.ndim != 2:
-            raise ValueError("X must be 2D.")
         n, p = X.shape
         Xc = X - np.mean(X, axis=0)
         S_local = (Xc.T @ Xc) / (n - 1)
@@ -393,56 +386,27 @@ def muirhead_sphericity_lrt(
 
 
 def czz_sphericity_test(X, center=False):
-    """
-    Chen–Zhang–Zhong (2010) sphericity test for H0: Sigma = sigma^2 * I_p.
+    """Chen-Zhang-Zhong (2010) sphericity test.
 
-    This implementation follows the paper's location-invariant U-statistics:
-      - T1 = Y1 - Y3 estimates tr(Sigma)
-      - T2 = Y2 - 2*Y4 + Y5 estimates tr(Sigma^2)
-      - U_n = p * (T2 / T1^2) - 1
-      - Z = (n * U_n) / 2 ~ N(0, 1) under H0, so p = 1 - Phi(Z) (right-tailed)
+    Tests H0: Sigma = sigma^2 * I using location-invariant U-statistics.
 
-    Inputs
-    ------
-    X : array-like, shape (n, p)
-        Data matrix with rows as observations.
-    center : bool, default False
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    center : bool, default=False
         If True, subtract column means before computing the test.
-        The original test is designed to be location-invariant without centering.
 
     Returns
     -------
     result : dict
-        Keys:
-        - U : float, the CZZ sphericity statistic U_n
-        - Z : float, normal approximation statistic
-        - p_normal : float, right-tailed p-value = 1 - Phi(Z)
-        - n, p : ints
-        - T1, T2 : floats, unbiased estimates of tr(Sigma) and tr(Sigma^2)
-        - Y1, Y2, Y3, Y4, Y5 : floats, intermediate U-statistics
-        - diagnostics: s_off, sum_R2, sumsq_off for verification
-
-    Notes
-    -----
-    Definitions use ordered tuples of distinct indices with Pk_n = n*(n-1)*...*(n-k+1):
-      Y1 = (1/n) * sum_i <X_i, X_i>
-      Y2 = (1/P2_n) * sum_{i!=j} <X_i, X_j>^2
-      Y3 = (1/P2_n) * sum_{i!=j} <X_i, X_j>
-      Y4 = (1/P3_n) * sum_{i,j,k all distinct} <X_i, X_j> * <X_i, X_k>
-      Y5 = (1/P4_n) * sum_{i,j,k,l all distinct} <X_i, X_j> * <X_k, X_l>
-
-    Efficient computation uses the Gram matrix G = X X^T:
-      - s_off = sum_{i!=j} G_ij
-      - sumsq_off = sum_{i!=j} G_ij^2
-      - R_i = sum_{j!=i} G_ij (off-diagonal row sums)
-      - sum_R2 = sum_i R_i^2
-      Then:
-        sum_{i,j,k all distinct} <X_i,X_j><X_i,X_k> = sum_R2 - sumsq_off
-        sum_{i,j,k,l all distinct} <X_i,X_j><X_k,X_l> = s_off^2 - 4*sum_R2 + 2*sumsq_off
+        A dictionary containing:
+        - 'stat' : float
+            The normal approximation statistic.
+        - 'p_value' : float
+            The right-tailed p-value.
     """
     X = validate_data_matrix(X)
-    if X.ndim != 2:
-        raise ValueError("X must be a 2D array (n, p).")
     n, p = X.shape
     if n < 4:
         raise ValueError("Require n >= 4 so that P4_n is positive.")
@@ -487,8 +451,25 @@ def czz_sphericity_test(X, center=False):
 
 
 def hallin_rank_sphericity_test(X, method="wilcoxon"):
-    """
-    Van der Waerden (normal-score) rank-based test for sphericity.
+    """Van der Waerden or Wilcoxon rank-based test for sphericity.
+
+    Tests the null hypothesis of sphericity using spatial ranks.
+
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input data matrix.
+    method : {"wilcoxon", "vdw"}, default="wilcoxon"
+        Rank-based score function to use.
+
+    Returns
+    -------
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic Q.
+        - 'p_value' : float
+            The computed p-value.
     """
     X = validate_data_matrix(X)
     if method not in {"wilcoxon", "vdw"}:

@@ -194,29 +194,37 @@ def boxm_test(X, Y, type="chi.squared"):
     return result_dict(test_statistic, p_value)
 
 
-def ishii_two_sample(X1, X2, test="full"):
-    """
-    Perform equality test of two covariance matrices using NR PCA.
+def ishii_two_sample(X, Y, test="full"):
+    """Ishii (2015) NR-PCA test for equality of two covariance matrices.
+
+    Tests H0: Sigma1 = Sigma2 under high-dimensional settings (p >> n).
 
     Parameters
     ----------
-    X1 : np.ndarray, shape (d, n1)
-        First data matrix.
-    X2 : np.ndarray, shape (d, n2)
-        Second data matrix.
-    test: str, options = {'full','leading','direction'}
-        Type of test
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    test : {"full", "leading", "direction"}, default="full"
+        Type of test.
 
     Returns
     -------
     result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The computed test statistic.
+        - 'p_value' : float
+            The computed p-value.
     """
-    X1 = validate_data_matrix(X1)
-    X2 = validate_data_matrix(X2)
-    if X1.shape[1] < 1000:
+    X, Y = validate_matching_data_matrices(X, Y)
+    if X.shape[1] < 1000:
         raise Warning(
             "Ishii et al (2015) known to be unreliable when d is small"
         )
+    # Transpose to (n_features, n_samples) for NR-PCA which expects features as rows
+    X1 = X.T
+    X2 = Y.T
     d, n1 = X1.shape
     _, n2 = X2.shape
     nu1 = n1 - 1
@@ -656,17 +664,16 @@ def wald_two_sample(X, Y):
     return result_dict(test_statistic, p_value)
 
 
-def tyler_two_sample(X1, X2, unknown_mean=False):
+def tyler_two_sample(X, Y, unknown_mean=False):
     """Tyler's M-estimator test for shape matrix equality.
 
-    Tests H0: Shape(Sigma_1) = Shape(Sigma_2) using Tyler's
-    M-estimator.
+    Tests H0: Shape(Sigma_1) = Shape(Sigma_2) using Tyler's M-estimator.
 
     Parameters
     ----------
-    X1 : array-like of shape (n_samples_1, n_features)
+    X : array-like of shape (n_samples_1, n_features)
         First sample data matrix.
-    X2 : array-like of shape (n_samples_2, n_features)
+    Y : array-like of shape (n_samples_2, n_features)
         Second sample data matrix.
     unknown_mean : bool, default=False
         If True, uses robust location estimation.
@@ -674,8 +681,7 @@ def tyler_two_sample(X1, X2, unknown_mean=False):
     Returns
     -------
     result : dict
-        Dictionary with keys:
-
+        A dictionary containing:
         - 'stat' : float
             Standardized test statistic.
         - 'p_value' : float
@@ -683,27 +689,22 @@ def tyler_two_sample(X1, X2, unknown_mean=False):
 
     References
     ----------
-    .. [1] Tyler, D. E. (1987). "A distribution-free M-estimator
-           of multivariate scatter." Annals of Statistics.
+    Tyler, D. E. (1987). "A distribution-free M-estimator of multivariate scatter." Annals of Statistics.
     """
-    X1 = validate_data_matrix(X1)
-    X2 = validate_data_matrix(X2)
-    n1, p = X1.shape
-    n2, _ = X2.shape
+    X, Y = validate_matching_data_matrices(X, Y)
+    n1, p = X.shape
+    n2, _ = Y.shape
 
-    # Tyler shapes (yours are fine; just ensure centering consistent with branch)
     if unknown_mean:
-        mu1 = tyler.robust_location(
-            X1
-        )  # weights ∝ ||x - xbar||^{-2}, as in paper
-        mu2 = tyler.robust_location(X2)
-        X1c, X2c = X1 - mu1, X2 - mu2
-        M1 = tyler.tylers_M(X1c)
-        M2 = tyler.tylers_M(X2c)
+        mu1 = tyler.robust_location(X)
+        mu2 = tyler.robust_location(Y)
+        Xc, Yc = X - mu1, Y - mu2
+        M1 = tyler.tylers_M(Xc)
+        M2 = tyler.tylers_M(Yc)
         c1, c2 = p / (n1 - 1), p / (n2 - 1)
     else:
-        M1 = tyler.tylers_M(X1)
-        M2 = tyler.tylers_M(X2)
+        M1 = tyler.tylers_M(X)
+        M2 = tyler.tylers_M(Y)
         c1, c2 = p / n1, p / n2
 
     A = la.solve(M1, M2)
@@ -739,31 +740,9 @@ def cai_2013_two_sample(X: np.ndarray, Y: np.ndarray) -> dict:
     test_result : dict
         Test statistic and p-value.
     """
-    n1, p = X.shape
-    n2 = Y.shape[0]
+    res = cai_liu_xia_2013_two_sample_test(X, Y)
+    return result_dict(res["t"], res["p_value"])
 
-    W1 = X - np.mean(X, axis=0)
-    W2 = Y - np.mean(Y, axis=0)
-
-    S1 = np.dot(W1.T, W1) / n1
-    S2 = np.dot(W2.T, W2) / n2
-
-    Theta1 = np.zeros((p, p))
-    Theta2 = np.zeros((p, p))
-
-    for i in range(n1):
-        Theta1 += (1 / n1) * (np.outer(W1[i, :], W1[i, :]) - S1) ** 2
-    for i in range(n2):
-        Theta2 += (1 / n2) * (np.outer(W2[i, :], W2[i, :]) - S2) ** 2
-
-    W = (S1 - S2) / np.sqrt(Theta1 / n1 + Theta2 / n2)
-    M = W**2
-    M_n = np.max(M)
-
-    TSvalue = M_n - 4 * np.log(p) + np.log(np.log(p))
-    pvalue = 1 - np.exp(-1 / np.sqrt(8 * np.pi) * np.exp(-TSvalue / 2))
-
-    return result_dict(TSvalue, pvalue)
 
 
 def he_2018_two_sample(
@@ -939,15 +918,14 @@ def chang2016(
     if Y.shape[1] != p:
         raise ValueError("Different dimensions of X and Y.")
 
-    scalev = np.tile(np.concatenate([np.ones(n1) / n1, np.ones(n2) / n2]), J)
     Sx = np.cov(X, rowvar=False) * (n1 - 1) / n1
     Sy = np.cov(Y, rowvar=False) * (n2 - 1) / n2
 
     xa = X - np.mean(X, axis=0)
     ya = Y - np.mean(Y, axis=0)
 
-    vx = ((xa**2).T @ (xa**2)) / n1 - 2 / n1 * ((xa.T @ xa) * Sx) + Sx**2
-    vy = ((ya**2).T @ (ya**2)) / n2 - 2 / n2 * ((ya.T @ ya) * Sy) + Sy**2
+    vx = ((xa**2).T @ (xa**2)) / n1 - Sx**2
+    vy = ((ya**2).T @ (ya**2)) / n2 - Sy**2
 
     with np.errstate(invalid="ignore"):
         deno = np.sqrt(vx / n1 + vy / n2)
@@ -958,16 +936,20 @@ def chang2016(
     yat = ya.T / n2
     ts = np.zeros(J)
 
+    scale1 = np.ones(n1) / n1
+    scale2 = np.ones(n2) / n2
+    scalev = np.concatenate([scale1, scale2])
+
     rng = np.random.default_rng(seed)
     for j in range(J):
-        g = rng.standard_normal(n1 + n2)
-        scalev = np.concatenate([np.ones(n1) / n1, np.ones(n2) / n2])
-        g *= scalev
-        atmp = np.sum(g[:n1])
-        btmp = np.sum(g[n1:])
+        g = rng.standard_normal(n1 + n2) * scalev
+        g1 = g[:n1]
+        g2 = g[n1:]
+        atmp = np.sum(g1)
+        btmp = np.sum(g2)
 
-        ts1 = ((xa * g[:n1][:, np.newaxis]) - (xat.T * atmp)).T @ xa
-        ts2 = ((ya * g[n1:][:, np.newaxis]) - (yat.T * btmp)).T @ ya
+        ts1 = ((xa * g1[:, np.newaxis]) - (xat.T * atmp)).T @ xa
+        ts2 = ((ya * g2[:, np.newaxis]) - (yat.T * btmp)).T @ ya
 
         ts[j] = np.max(np.abs(ts1 - ts2) / deno)
 
@@ -1146,57 +1128,57 @@ def ding2023_two_sample(
     return result_dict(statistic, pvalue)
 
 
-def two_sample_cov_test(X1, X2, mean=None):
-    """
-    Perform a two-sample covariance test to determine if there is a significant
-    difference between the covariances of two samples.
+def two_sample_cov_test(X, Y, mean=None):
+    """LRT-based high-dimensional equality test of two covariance matrices.
+
+    Tests H0: Sigma1 = Sigma2 under high-dimensional settings.
 
     Parameters
     ----------
-    X1 : ndarray of shape (n_samples1, n_features)
-        The first input data matrix.
-    X2 : ndarray of shape (n_samples2, n_features)
-        The second input data matrix.
-    mean : ndarray of shape (n_features,), default=None
-        The mean vector to be used for adjusting both samples.
-        If None, use the sample means.
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
+    mean : array-like of shape (n_features,), optional
+        Common mean vector if known.
 
     Returns
     -------
-    dict
+    result : dict
         A dictionary containing:
-        - 'p_value': The p-value of the test.
-        - 'z_value': The computed Z-value for the test.
-        - 'lrt': The likelihood ratio test statistic.
+        - 'p_value' : float
+            The p-value of the test.
+        - 'z_value' : float
+            The computed Z-value for the test.
+        - 'lrt' : float
+            The likelihood ratio test statistic.
     """
-    if X1.shape[1] != X2.shape[1]:
-        raise ValueError("Input data should have the same dimension")
-
-    n1, p1 = X1.shape
-    n2, p2 = X2.shape
+    X, Y = validate_matching_data_matrices(X, Y)
+    n1, p = X.shape
+    n2, _ = Y.shape
     if mean is not None:
         N1 = n1
         N2 = n2
-        X1 = X1 - mean
-        X2 = X2 - mean
+        X_centered = X - mean
+        Y_centered = Y - mean
     else:
         N1 = n1 - 1
         N2 = n2 - 1
-        X1 = X1 - np.mean(X1, axis=0)
-        X2 = X2 - np.mean(X2, axis=0)
+        X_centered = X - np.mean(X, axis=0)
+        Y_centered = Y - np.mean(Y, axis=0)
 
     N = N1 + N2
     c1 = N1 / N
     c2 = N2 / N
-    yN1 = p1 / N1
-    yN2 = p2 / N2
-    S1 = X1.T @ X1 / N1
-    S2 = X2.T @ X2 / N2
+    yN1 = p / N1
+    yN2 = p / N2
+    S1 = X_centered.T @ X_centered / N1
+    S2 = Y_centered.T @ Y_centered / N2
 
-    log_V1_ = np.log(la.det(S1 @ la.solve(S2, np.eye(p1)))) * (N1 / 2) - np.log(
-        la.det(c1 * S1 @ la.solve(S2, np.eye(p2)) + c2 * np.eye(p2))
+    log_V1_ = np.log(la.det(S1 @ la.solve(S2, np.eye(p)))) * (N1 / 2) - np.log(
+        la.det(c1 * S1 @ la.solve(S2, np.eye(p)) + c2 * np.eye(p))
     ) * (N / 2)
-    z_value = (-2 / N * log_V1_ - p1 * d2(yN1, yN2) - mu2(yN1, yN2)) / np.sqrt(
+    z_value = (-2 / N * log_V1_ - p * d2(yN1, yN2) - mu2(yN1, yN2)) / np.sqrt(
         sigma2_2(yN1, yN2)
     )
     p_value = norm.sf(z_value)
