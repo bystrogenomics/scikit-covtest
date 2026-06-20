@@ -635,7 +635,7 @@ def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
         )
 
     T_hat = (E12 / np.sqrt(E1 * E2)) - 1.0
-    z = np.sqrt(n1 * n2) * T_hat
+    z = 0.5 * np.sqrt(n1 * n2) * T_hat
 
     if alternative == "two-sided":
         p_value = 2.0 * (1.0 - stats.norm.cdf(abs(z)))
