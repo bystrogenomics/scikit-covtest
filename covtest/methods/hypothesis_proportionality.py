@@ -553,9 +553,9 @@ def proportional_cov_test_tsukuda(
     X, Y = validate_matching_data_matrices(X, Y)
     m, p = X.shape
     n, _ = Y.shape
-    if m < 4 or n < 4:
+    if m < 3 or n < 3:
         raise ValueError(
-            "Each group must have at least 4 observations (for unbiased tr(Sigma^2))."
+            "Each group must have at least 3 observations (for Tsukuda-Matsuura a2 estimator)."
         )
 
     # Sample covariances with ddof=1
@@ -568,8 +568,8 @@ def proportional_cov_test_tsukuda(
     a_y1 = np.trace(Sy) / p
     a_xy = np.trace(Sx @ Sy) / p
 
-    a_x2 = tsukuda2019._unbiased_tr_sigma2_per_p(X)
-    a_y2 = tsukuda2019._unbiased_tr_sigma2_per_p(Y)
+    a_x2 = tsukuda2019._a2_hat_tsukuda(X)
+    a_y2 = tsukuda2019._a2_hat_tsukuda(Y)
 
     # Core statistic and variance estimate
     T = (m * n / (m + n)) * (
@@ -580,10 +580,10 @@ def proportional_cov_test_tsukuda(
         (n**2) / (m**2 + n**2)
     ) * (a_y2 / (a_y1**2))
 
-    b_hat = np.sqrt(b2_hat) if b2_hat > 0 else np.nan
-    Z = T / (2.0 * b_hat) if np.isfinite(b_hat) and b_hat > 0 else np.nan
+    Z = T / (2.0 * b2_hat) if b2_hat > 0 else np.nan
 
     if single_side:
+        # Note: the paper proposes the one-sided upper-tail test.
         p_value = 1.0 - stats.norm.cdf(Z)
     else:
         p_value = 2.0 * stats.norm.sf(abs(Z))
