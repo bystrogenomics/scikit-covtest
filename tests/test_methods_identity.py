@@ -277,3 +277,18 @@ def test_srivastava_2011_pvalues_and_smoke(identity_data):
     assert np.mean(pvals == 0.0) == 0.0
 
 
+def test_identity_T2_null_calibration():
+    import numpy as np
+    np.random.seed(42)
+    n, p, n_sims = 50, 200, 5000
+    rejections = 0
+    for _ in range(n_sims):
+        X = np.random.randn(n, p)
+        result = identity_T2_test(X, center=True)
+        if result["p_value"] < 0.05:
+            rejections += 1
+    rate = rejections / n_sims
+    # With 5000 sims, 95% CI for true 0.05 rate is roughly [0.04, 0.06]
+    assert 0.03 <= rate <= 0.08, f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
+
+

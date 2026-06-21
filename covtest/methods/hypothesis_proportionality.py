@@ -220,18 +220,16 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     Y : array, shape (N2, p)
         Sample 2 (rows are observations).
     regularize : float, default 0.0
-        Optional ridge added to \hat\Sigma_2 for numerical stability.
+        Optional ridge parameter. Must be 0.0. Retained only for backward compatibility.
 
     Returns
     -------
-    result : dict with keys
-        'Tn'         : test statistic
-        'mu_Tn'      : asymptotic mean adjustment (without the + p*h^2/(1-y2) term)
-        'v_Tn'       : asymptotic variance
-        'Z'          : standardized statistic ~ N(0,1) under H0
-        'pvalue_one_sided' : 1 - Phi(Z)
-        'pvalue_two_sided' : 2 * (1 - Phi(abs(Z)))
-        'y1','y2','h','beta_x','beta_y'
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The standardized Liu 2014 test statistic Z.
+        - 'p_value' : float
+            The one-sided upper-tail p-value.
     Notes
     -----
     Requires p < n2 = N2 - 1.
@@ -240,7 +238,11 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     Y = validate_data_matrix(Y)
     N1, p = X.shape
     N2, p2 = Y.shape
-    assert p == p2, "X and Y must have the same number of columns (p)."
+    if p != p2:
+        raise ValueError("X and Y must have the same number of columns (p).")
+
+    if regularize != 0.0:
+        raise ValueError("regularize is not supported and must be 0.0.")
 
     n1 = N1 - 1
     n2 = N2 - 1
@@ -250,10 +252,6 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     # Unbiased sample covariances
     S1 = np.cov(X.T)
     S2 = np.cov(Y.T)
-
-    # Optional ridge for numerical stability of S2^{-1}
-    if regularize > 0:
-        S2 = S2 + regularize * np.eye(p)
 
     S2_inv = la.inv(S2)
     A = S1 @ S2_inv
@@ -278,10 +276,9 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     # Z-score (one-sided test: large positive values reject H0)
     Z = (Tn - (mu_Tn + p * h**2 / (1 - y2))) / np.sqrt(v_Tn)
 
-    p_one = 1 - stats.norm.cdf(Z)
-    results = {"stat": Z, "p_value": p_one}
+    p_one = stats.norm.sf(Z)
 
-    return results
+    return {"stat": float(Z), "p_value": float(p_one)}
 
 
 def proportionality_test_signs(
@@ -650,10 +647,5 @@ def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
 
     return {
         "stat": float(z),
-        "T_hat": float(T_hat),
-        "z": float(z),
         "p_value": float(p_value),
-        "E1": float(E1),
-        "E2": float(E2),
-        "E12": float(E12),
     }

@@ -100,12 +100,12 @@ def test_proportionality_methods_alternative_power(method):
 
 
 def test_proportionality_lz_regularization_numerical_stability():
-    """Ensure LZ method handles ill-conditioned Sigma2"""
+    """Ensure LZ method raises ValueError when regularize != 0"""
     rng = np.random.default_rng(123)
     X = rng.standard_normal((60, 25))
     Y = rng.standard_normal((60, 25))
-    res = proportionality_test_LZ(X, Y, regularize=1e-4)
-    assert_result_dict_2samp(res)
+    with pytest.raises(ValueError, match="regularize is not supported"):
+        proportionality_test_LZ(X, Y, regularize=1e-4)
 
 
 def test_ahmad_2022_helpers():
@@ -231,4 +231,30 @@ def test_tsukuda_anisotropic_diagonal_h0():
     assert_result_dict_2samp(res)
     # Under H0, the p-value shouldn't be extremely small (e.g. not rejecting at alpha = 0.05 / 0.01)
     assert res["p_value"] > 0.01
+
+
+def test_lz_proportionality_additional_verifications():
+    import scipy.stats as stats
+    rng = np.random.default_rng(123)
+    X = rng.standard_normal((60, 25))
+    Y = rng.standard_normal((60, 25))
+    
+    res = proportionality_test_LZ(X, Y)
+    
+    # 1. The function returns exactly the keys {"stat", "p_value"}
+    assert set(res.keys()) == {"stat", "p_value"}
+    
+    # 2. p_value == stats.norm.sf(stat) up to floating-point tolerance
+    assert np.allclose(res["p_value"], stats.norm.sf(res["stat"]))
+    
+    # 3. Passing regularize > 0 raises a ValueError
+    with pytest.raises(ValueError, match="regularize is not supported"):
+        proportionality_test_LZ(X, Y, regularize=0.1)
+        
+    # 4. Mismatched feature dimensions raise a ValueError rather than an AssertionError
+    X_mis = rng.standard_normal((60, 25))
+    Y_mis = rng.standard_normal((60, 26))
+    with pytest.raises(ValueError, match="same number of columns"):
+        proportionality_test_LZ(X_mis, Y_mis)
+
 
