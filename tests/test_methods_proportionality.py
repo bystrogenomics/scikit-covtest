@@ -4,6 +4,7 @@ import pytest
 from covtest.methods.hypothesis_proportionality import (
     ahmad_2022_proportionality_test,
     bartlett_adjusted_proportionality_test,
+    bootstrap_bartlett_adjusted_proportionality_test,
     flury_proportionality_test,
     proportional_cov_test_tsukuda,
     proportionality_plrt,
@@ -26,7 +27,7 @@ def assert_result_dict_2samp(res):
         ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
-        bartlett_adjusted_proportionality_test,
+        bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
         proportionality_plrt,
@@ -47,7 +48,7 @@ def test_proportionality_methods_smoke(method):
         ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
-        bartlett_adjusted_proportionality_test,
+        bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
         proportionality_plrt,
@@ -70,7 +71,7 @@ def test_proportionality_methods_null_finite(method):
         ahmad_2022_proportionality_test,
         proportionality_test_LZ,
         flury_proportionality_test,
-        bartlett_adjusted_proportionality_test,
+        bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
         proportionality_plrt,
@@ -256,5 +257,103 @@ def test_lz_proportionality_additional_verifications():
     Y_mis = rng.standard_normal((60, 26))
     with pytest.raises(ValueError, match="same number of columns"):
         proportionality_test_LZ(X_mis, Y_mis)
+
+
+def test_eriksen_proportionality_verifications():
+    from covtest.methods._eriksen_1987 import (
+        test_cov_proportionality,
+        bootstrap_bartlett_adjusted_proportionality_test,
+        bartlett_adjusted_proportionality_test as deprecated_bartlett
+    )
+    rng = np.random.default_rng(12345)
+    p = 3
+    n1, n2 = 10, 12
+    Sigma1 = np.eye(p)
+    Sigma2 = 2.5 * Sigma1
+    
+    # Generate data under H0: proportional covariances
+    X_null = rng.multivariate_normal(np.zeros(p), Sigma1, size=n1)
+    Y_null = rng.multivariate_normal(np.zeros(p), Sigma2, size=n2)
+    
+    # 1. Non-negative statistic and p-value in [0, 1]
+    res_null = test_cov_proportionality(X_groups=[X_null, Y_null])
+    assert res_null["stat"] >= 0
+    assert 0 <= res_null["p_value"] <= 1
+    
+    # 2. Under a non-proportional alternative, statistic is larger
+    # Generate data under alternative: non-proportional
+    Sigma2_alt = Sigma2.copy()
+    Sigma2_alt[0, 0] *= 10.0
+    X_alt = rng.multivariate_normal(np.zeros(p), Sigma1, size=n1)
+    Y_alt = rng.multivariate_normal(np.zeros(p), Sigma2_alt, size=n2)
+    
+    res_alt = test_cov_proportionality(X_groups=[X_alt, Y_alt])
+    assert res_alt["stat"] > res_null["stat"]
+    
+    # 3. Scale invariance: multiplying one group's observations by a positive scalar
+    res_scaled = test_cov_proportionality(X_groups=[X_null, 3.5 * Y_null])
+    assert np.allclose(res_null["stat"], res_scaled["stat"], atol=1e-10)
+    
+    # 4. Group-order invariance: swapping X and Y
+    res_swapped = test_cov_proportionality(X_groups=[Y_null, X_null])
+    assert np.allclose(res_null["stat"], res_swapped["stat"], atol=1e-10)
+    
+    # 5. Return-key test: check keys of bootstrap function
+    res_boot = bootstrap_bartlett_adjusted_proportionality_test(
+        X_groups=[X_null, Y_null], B=30, random_state=42
+    )
+    # Check that both adjusted and unadjusted statistics are present
+    assert "stat" in res_boot
+    assert "p_value" in res_boot
+    assert "stat_unadjusted" in res_boot
+    assert "p_value_unadjusted" in res_boot
+    assert "phi_bootstrap" in res_boot
+    assert "stat_bootstrap_adj" in res_boot
+    assert "p_value_bootstrap_adj" in res_boot
+    assert "mean_T_bootstrap" in res_boot
+    assert "cov_hat_groups" in res_boot
+    
+    # Verify deprecated wrapper raises warning
+    with pytest.deprecated_call():
+        res_dep = deprecated_bartlett(
+            X_groups=[X_null, Y_null], B=30, random_state=42
+        )
+    assert np.allclose(res_boot["stat"], res_dep["stat"])
+    
+    # 6. Invalid inputs validation checks
+    # p == 1
+    X_p1 = rng.standard_normal((10, 1))
+    Y_p1 = rng.standard_normal((10, 1))
+    with pytest.raises(ValueError, match="p must be at least 2"):
+        test_cov_proportionality(X_groups=[X_p1, Y_p1])
+        
+    # Singular sample covariance (N < p + 1 observations)
+    X_sing = rng.standard_normal((3, 4))
+    Y_sing = rng.standard_normal((10, 4))
+    with pytest.raises(ValueError, match=r"must have at least p\+1 observations"):
+        test_cov_proportionality(X_groups=[X_sing, Y_sing])
+        
+    # Mismatched dimensions (columns)
+    X_mis = rng.standard_normal((10, 3))
+    Y_mis = rng.standard_normal((12, 4))
+    with pytest.raises(ValueError, match="same number of features p"):
+        test_cov_proportionality(X_groups=[X_mis, Y_mis])
+        
+    # Nonpositive n_list / S_list mismatch
+    S_list = [np.eye(3), np.eye(3)]
+    n_list = [10, -5]
+    with pytest.raises(ValueError, match="n_1 must be positive"):
+        test_cov_proportionality(S_list=S_list, n_list=n_list)
+        
+    # 7. Reproducibility with random_state fixed
+    res_boot1 = bootstrap_bartlett_adjusted_proportionality_test(
+        X_groups=[X_null, Y_null], B=50, random_state=123
+    )
+    res_boot2 = bootstrap_bartlett_adjusted_proportionality_test(
+        X_groups=[X_null, Y_null], B=50, random_state=123
+    )
+    assert np.allclose(res_boot1["stat"], res_boot2["stat"])
+    assert np.allclose(res_boot1["p_value"], res_boot2["p_value"])
+
 
 

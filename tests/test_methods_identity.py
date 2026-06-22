@@ -297,3 +297,74 @@ def test_identity_T2_null_calibration():
     assert 0.03 <= rate <= 0.08, f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
 
 
+def test_chen_xu_gram_formulas():
+    from covtest.methods._chen_xu_gram import (
+        gram_blocks,
+        T1_chen,
+        T2_chen,
+        T3_xu,
+        delta_hat_xu
+    )
+    rng = np.random.default_rng(12345)
+    n = 8
+    p = 4
+    # Generate random non-centered data
+    X = rng.normal(loc=1.5, scale=2.0, size=(n, p))
+    
+    # Compute using the package (which centers X internally)
+    blocks = gram_blocks(X)
+    T1_pkg = T1_chen(blocks)
+    T2_pkg = T2_chen(blocks)
+    T3_pkg = T3_xu(blocks)
+    delta_pkg = delta_hat_xu(blocks)
+    
+    # Independent general-form implementation on centered X
+    Xc = X - X.mean(axis=0)
+    G = Xc @ Xc.T
+    d = np.diag(G)
+    D = d.sum()
+    D2 = (d**2).sum()
+    Q2 = (G**2).sum()
+    
+    R = G.sum(axis=1) - d
+    s_off = R.sum()
+    sumsq_off = (G**2).sum() - (d**2).sum()
+    sum_R2 = (R**2).sum()
+    
+    P2 = n * (n - 1)
+    P3 = n * (n - 1) * (n - 2)
+    P4 = n * (n - 1) * (n - 2) * (n - 3)
+    
+    # Y5 general form
+    Y5_general = (s_off**2 - 4 * sum_R2 + 2 * sumsq_off) / P4
+    
+    # Y5 centered closed form
+    Y5_centered = (D**2 + 2 * Q2 - 6 * D2) / P4
+    
+    # 1. Assert centered closed form matches general form to numerical tolerance
+    assert np.isclose(Y5_centered, Y5_general)
+    
+    # 2. General-form calculations for T1, T2, T3, delta
+    T1_general = D / (n - 1)
+    
+    Y2_general = sumsq_off / P2
+    Y4_general = (sum_R2 - sumsq_off) / P3
+    T2_general = Y2_general - 2 * Y4_general + Y5_general
+    
+    Y_tilde_2_general = (D**2 - D2) / P2
+    Y_tilde_4_general = (D * s_off - 2 * (d * R).sum()) / P3
+    T3_general = Y_tilde_2_general - 2 * Y_tilde_4_general + Y5_general
+    
+    Y6_general = D2 / n
+    Y7_general = (d * R).sum() / P2
+    Y8_general = Y_tilde_4_general
+    delta_general = Y6_general - 4 * Y7_general + 2 * Y8_general + 4 * Y4_general - 3 * Y5_general
+    
+    # Assert that pkg implementations match these general-form values
+    assert np.isclose(T1_pkg, T1_general)
+    assert np.isclose(T2_pkg, T2_general)
+    assert np.isclose(T3_pkg, T3_general)
+    assert np.isclose(delta_pkg, delta_general)
+
+
+

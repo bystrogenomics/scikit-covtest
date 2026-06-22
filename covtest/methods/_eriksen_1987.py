@@ -18,6 +18,68 @@ def _ensure_pd(A, ridge):
     return A + ridge * np.eye(p)
 
 
+def _c_from_sigma(Sigma, S_list, p, ridge=0.0):
+    Sigma_inv = inv(_ensure_pd(Sigma, ridge))
+    return np.array([np.trace(Sigma_inv @ _ensure_pd(S, ridge)) / p for S in S_list])
+
+
+def _validate_inputs(X_groups, S_list, n_list, ridge):
+    if X_groups is None and (S_list is None or n_list is None):
+        raise ValueError(
+            "Provide either X_groups, or S_list together with n_list."
+        )
+
+    if X_groups is not None:
+        p = X_groups[0].shape[1]
+        for k, X in enumerate(X_groups):
+            if X.ndim != 2:
+                raise ValueError(f"Group {k} must be a 2D array.")
+            if X.shape[1] != p:
+                raise ValueError("All groups must have the same number of features p.")
+            N_k = X.shape[0]
+            if N_k < p + 1:
+                raise ValueError(
+                    f"Group {k} must have at least p+1 observations for stability (got N={N_k}, p={p})."
+                )
+        S_list = [_sample_cov(X) for X in X_groups]
+        n_list = [X.shape[0] - 1 for X in X_groups]
+    else:
+        if len(S_list) == 0:
+            raise ValueError("S_list cannot be empty.")
+        first_S = S_list[0]
+        if first_S.ndim == 2:
+            p = first_S.shape[0]
+        elif first_S.ndim == 1:
+            p = first_S.shape[0]
+        else:
+            p = 1
+
+    K = len(S_list)
+
+    if len(S_list) != len(n_list):
+        raise ValueError("S_list and n_list must have the same length.")
+
+    if p < 2:
+        raise ValueError("p must be at least 2 (proportionality is vacuous for p=1).")
+
+    for k, n_val in enumerate(n_list):
+        if n_val <= 0:
+            raise ValueError(f"n_{k} must be positive.")
+
+    for k, S in enumerate(S_list):
+        if S.ndim != 2 or S.shape[0] != S.shape[1]:
+            raise ValueError(f"S_{k} must be a square matrix.")
+        if S.shape[0] != p:
+            raise ValueError(f"S_{k} must have shape ({p}, {p}).")
+        
+        # Positive definiteness check: fail early if logdet is not positive
+        sign, logdet = np.linalg.slogdet(_ensure_pd(S, ridge))
+        if sign <= 0:
+            raise ValueError(f"Sample covariance matrix S_{k} is not positive definite.")
+
+    return S_list, n_list, K, p
+
+
 def fit_proportional_covariances(
     S_list, n_list, *, tol=1e-10, max_iter=10_000, ridge=0.0
 ):
@@ -25,10 +87,24 @@ def fit_proportional_covariances(
     MLE under proportionality: Sigma_k = c_k * Sigma  (k = 1..K).
     """
     K = len(S_list)
-    p = S_list[0].shape[0]
+    if K == 0:
+        raise ValueError("S_list cannot be empty.")
+    first_S = S_list[0]
+    if first_S.ndim == 2:
+        p = first_S.shape[0]
+    elif first_S.ndim == 1:
+        p = first_S.shape[0]
+    else:
+        p = 1
     n_list = np.asarray(n_list, dtype=float)
-    assert all(S.shape == (p, p) for S in S_list)
-    assert len(n_list) == K
+    
+    if len(S_list) != len(n_list):
+        raise ValueError("S_list and n_list must have the same length.")
+    if p < 2:
+        raise ValueError("p must be at least 2.")
+    for k, S in enumerate(S_list):
+        if S.shape != (p, p):
+            raise ValueError(f"S_{k} must have shape ({p}, {p}).")
 
     S_list = [_ensure_pd(S.astype(float), ridge) for S in S_list]
     n_plus = float(np.sum(n_list))
@@ -37,6 +113,8 @@ def fit_proportional_covariances(
     Sigma = sum(n_list[k] * S_list[k] for k in range(K)) / n_plus
     Sigma = _ensure_pd(Sigma, ridge)
 
+    converged = False
+    iters = max_iter
     for it in range(1, max_iter + 1):
         Sigma_inv = inv(Sigma)
         c = np.array([np.trace(Sigma_inv @ S_list[k]) / p for k in range(K)])
@@ -50,9 +128,12 @@ def fit_proportional_covariances(
         )
         Sigma = Sigma_new
         if rel < tol:
-            return Sigma, c, True, it
+            converged = True
+            iters = it
+            break
 
-    return Sigma, c, False, max_iter
+    c_hat = _c_from_sigma(Sigma, S_list, p, ridge)
+    return Sigma, c_hat, converged, iters
 
 
 def _wilks_stat_from_S(S_list, n_list, Sigma_hat, c_hat, ridge=0.0):
@@ -93,17 +174,7 @@ def test_cov_proportionality(
     """
     Unadjusted Wilks LRT for H0: Sigma_k = c_k Sigma.
     """
-    if X_groups is None and (S_list is None or n_list is None):
-        raise ValueError(
-            "Provide either X_groups, or S_list together with n_list."
-        )
-
-    if X_groups is not None:
-        S_list = [_sample_cov(X) for X in X_groups]
-        n_list = [X.shape[0] - 1 for X in X_groups]
-
-    K = len(S_list)
-    p = S_list[0].shape[0]
+    S_list, n_list, K, p = _validate_inputs(X_groups, S_list, n_list, ridge)
 
     Sigma_hat, c_hat, converged, iters = fit_proportional_covariances(
         S_list, n_list, tol=tol, max_iter=max_iter, ridge=ridge
@@ -112,12 +183,13 @@ def test_cov_proportionality(
 
     # df = (K−1)[ p(p+1)/2 − 1 ]
     df = int((K - 1) * (p * (p + 1) // 2 - 1))
-    pval = 1.0 - chi2.cdf(stat, df)
+    pval = chi2.sf(stat, df)
 
     return dict(
         stat=float(stat),
         df=df,
-        pvalue=float(pval),
+        p_value=float(pval),
+        pvalue=float(pval),  # for backward compatibility
         Sigma_hat=Sigma_hat,
         c_hat=c_hat,
         converged=converged,
@@ -130,7 +202,7 @@ def test_cov_proportionality(
 # ---------- Bartlett-adjusted LRT (parametric factor) ----------
 
 
-def bartlett_adjusted_proportionality_test(
+def bootstrap_bartlett_adjusted_proportionality_test(
     X_groups=None,
     *,
     S_list=None,
@@ -143,59 +215,44 @@ def bartlett_adjusted_proportionality_test(
     random_state=None,
 ):
     """
-    Bartlett-adjusted Wilks LRT for proportional covariance matrices.
+    Bootstrap Bartlett-adjusted Wilks LRT for proportional covariance matrices.
 
-    Strategy
-    --------
-    1) Fit H0 by MLE (hat(Sigma), hat{c}) using the proportional model
-       Sigma_k = c_k Sigma.
-    2) Compute the unadjusted Wilks statistic T = -2 log Λ from the data.
-    3) Parametric Bartlett factor:
-         simulate B datasets under H0 with the fitted hat(Sigma)_k =
-         hat{c}_k hat(Sigma) and the same n_k;
-         compute T_b for each; set phi = df / mean(T_b).
-       The adjusted statistic is T_adj = phi * T, yielding E[T_adj]
-       approx df.
+    This function performs a parametric-bootstrap Bartlett-style calibration of the 
+    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic 
+    Bartlett adjustment (Theorem 6.1 of Eriksen 1987).
 
     Parameters
     ----------
     X_groups : list of arrays, optional
-        Observations per group (N_k x p). If given, S_list and n_list are
-        built with ddof=1.
+        Observations per group (N_k x p).
     S_list, n_list : provide these if X_groups is not given.
         S_list: unbiased sample covariances (ddof=1), n_list: n_k = N_k - 1.
     ridge : float, default 0.0
         Small diagonal ridge to improve numerical stability when needed.
     tol, max_iter : solver settings for the H0 MLE.
     B : int, default 400
-        Number of parametric bootstrap replicates to estimate the
-        Bartlett factor.
+        Number of parametric bootstrap replicates to estimate the Bartlett factor.
     refit_mle_each_boot : bool, default True
-        If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap
-        replicate before computing T_b.
-        This is more accurate; set False for speed (uses the original
-        hat(Sigma), hat{c} in T_b).
+        If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap replicate.
+        Highly recommended. If False, the null model is not re-maximized, which 
+        means it is not a true LRT bootstrap calibration.
     random_state : int or np.random.Generator, optional
         RNG seed or Generator.
-
-    Returns
-    -------
-    result : dict
-        Keys include:
-        - 'stat'        : unadjusted Wilks statistic
-        - 'df'          : chi-square degrees of freedom
-        - 'pvalue'      : unadjusted p-value (χ²_df)
-        - 'phi'         : multiplicative Bartlett factor
-                          (approx df / E[T] under H0)
-        - 'stat_adj'    : Bartlett-adjusted statistic  (phi * stat)
-        - 'pvalue_adj'  : Bartlett-adjusted p-value    (χ²_df right-tail)
-        - 'Sigma_hat', 'c_hat', 'converged', 'iterations', 'n_list','S_list'
     """
+    import warnings
+    if not refit_mle_each_boot:
+        warnings.warn(
+            "refit_mle_each_boot=False is not a true LRT bootstrap calibration "
+            "because the null model is not re-maximized for each bootstrap replicate.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    S_list, n_list, K, p = _validate_inputs(X_groups, S_list, n_list, ridge)
     rng = np.random.default_rng(random_state)
 
     # 1) Unadjusted fit and statistic
     base = test_cov_proportionality(
-        X_groups=X_groups,
         S_list=S_list,
         n_list=n_list,
         ridge=ridge,
@@ -204,12 +261,9 @@ def bartlett_adjusted_proportionality_test(
     )
     Sigma_hat = base["Sigma_hat"]
     c_hat = base["c_hat"]
-    S_list = base["S_list"]
-    n_list = np.asarray(base["n_list"], dtype=float)
-    K = len(S_list)
-    p = S_list[0].shape[0]
     df = base["df"]
     T_obs = base["stat"]
+    p_unadj = base["p_value"]
 
     # 2) Build Cholesky factors for simulation under H0
     chol_list = []
@@ -237,15 +291,41 @@ def bartlett_adjusted_proportionality_test(
         T_boot[b] = T_b
 
     mean_T = float(np.mean(T_boot))
-    # Multiplicative Bartlett factor so that E[phi*T] approx df
     phi = df / mean_T if mean_T > 0 else 1.0
 
-    T_adj = phi * T_obs
-    p_adj = 1.0 - chi2.cdf(T_adj, df)
+    T_boot_adj = phi * T_obs
+    p_boot_adj = chi2.sf(T_boot_adj, df)
 
     return {
-        **base,
-        "phi": float(phi),
-        "stat_adj": float(T_adj),
-        "pvalue_adj": float(p_adj),
+        "stat": float(T_boot_adj),
+        "p_value": float(p_boot_adj),
+        "pvalue": float(p_boot_adj),  # for backward compatibility
+        "stat_unadjusted": float(T_obs),
+        "p_value_unadjusted": float(p_unadj),
+        "pvalue_unadjusted": float(p_unadj),  # for backward compatibility
+        "df": df,
+        "phi_bootstrap": float(phi),
+        "stat_bootstrap_adj": float(T_boot_adj),
+        "p_value_bootstrap_adj": float(p_boot_adj),
+        "pvalue_bootstrap_adj": float(p_boot_adj),  # for backward compatibility
+        "mean_T_bootstrap": float(mean_T),
+        "B": B,
+        "Sigma_hat": Sigma_hat,
+        "c_hat": c_hat,
+        "cov_hat_groups": [c_hat[k] * Sigma_hat for k in range(K)],
+        "converged": base["converged"],
+        "iterations": base["iterations"],
+        "n_list": np.asarray(n_list, dtype=float),
+        "S_list": S_list,
     }
+
+
+def bartlett_adjusted_proportionality_test(*args, **kwargs):
+    import warnings
+    warnings.warn(
+        "bartlett_adjusted_proportionality_test is deprecated; "
+        "use bootstrap_bartlett_adjusted_proportionality_test instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return bootstrap_bartlett_adjusted_proportionality_test(*args, **kwargs)
