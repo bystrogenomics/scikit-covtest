@@ -18,6 +18,7 @@ from covtest.methods.hypothesis_identity import (
     xu_2023_identity,
     ahmad_2017_identity,
     test_identity_T2 as identity_T2_test,
+    ahmad_2015_identity,
     identity_covariance_test,
 )
 
@@ -204,6 +205,10 @@ def test_identity_T2_outputs(identity_data, non_identity_data):
     short_data = np.random.default_rng(42).normal(size=(1, 5))
     with pytest.raises(ValueError, match="Need n >= 2 samples."):
         identity_T2_test(short_data)
+
+
+def test_ahmad_2015_identity_alias():
+    assert ahmad_2015_identity is identity_T2_test
 
 
 def test_identity_covariance_test_public_interface(identity_data, non_identity_data):

@@ -227,6 +227,9 @@ def test_identity_T2(
     }
 
 
+ahmad_2015_identity = test_identity_T2
+
+
 def ledoit_wolf_identity(X):
     """Ledoit-Wolf (2002) test for identity covariance matrix.
 
@@ -822,7 +825,7 @@ def identity_covariance_test(X, method="chen_2010", **kwargs):
     """
     methods_map = {
         "chen_2010": chen_2010_identity,
-        "ahmad2015": test_identity_T2,
+        "ahmad2015": ahmad_2015_identity,
         "xu_2023": xu_2023_identity,
         "srivastava_2005": srivastava_2005_identity,
         "srivastava_2011": srivastava2011_single_sample,
