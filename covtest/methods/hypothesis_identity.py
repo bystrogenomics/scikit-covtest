@@ -202,6 +202,14 @@ def test_identity_T2(
 
     T2 = (E3 / p) - (2.0 * E1 / p) + 1.0
 
+    # When data has been centered by subtracting the sample mean, the raw
+    # Ahmad/von Rosen (2015) T2 statistic acquires a positive bias of
+    # p / n**2 under H0.  The corresponding z-score bias is p / (2*n).
+    # We subtract this finite-sample correction so that (n/2)*T2_corrected
+    # is mean-zero under the null for any p/n ratio.
+    if center:
+        T2 = T2 - p / (n ** 2)
+
     z, used_cal = ahmad2015._standardize_T(
         T2, n=n, p=p, calibration=calibration
     )
@@ -217,6 +225,9 @@ def test_identity_T2(
         "stat": float(T2),
         "p_value": pval,
     }
+
+
+ahmad_2015_identity = test_identity_T2
 
 
 def ledoit_wolf_identity(X):
@@ -814,7 +825,7 @@ def identity_covariance_test(X, method="chen_2010", **kwargs):
     """
     methods_map = {
         "chen_2010": chen_2010_identity,
-        "ahmad2015": test_identity_T2,
+        "ahmad2015": ahmad_2015_identity,
         "xu_2023": xu_2023_identity,
         "srivastava_2005": srivastava_2005_identity,
         "srivastava_2011": srivastava2011_single_sample,

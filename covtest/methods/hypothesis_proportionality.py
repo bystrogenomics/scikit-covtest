@@ -220,18 +220,16 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     Y : array, shape (N2, p)
         Sample 2 (rows are observations).
     regularize : float, default 0.0
-        Optional ridge added to \hat\Sigma_2 for numerical stability.
+        Optional ridge parameter. Must be 0.0. Retained only for backward compatibility.
 
     Returns
     -------
-    result : dict with keys
-        'Tn'         : test statistic
-        'mu_Tn'      : asymptotic mean adjustment (without the + p*h^2/(1-y2) term)
-        'v_Tn'       : asymptotic variance
-        'Z'          : standardized statistic ~ N(0,1) under H0
-        'pvalue_one_sided' : 1 - Phi(Z)
-        'pvalue_two_sided' : 2 * (1 - Phi(abs(Z)))
-        'y1','y2','h','beta_x','beta_y'
+    result : dict
+        A dictionary containing:
+        - 'stat' : float
+            The standardized Liu 2014 test statistic Z.
+        - 'p_value' : float
+            The one-sided upper-tail p-value.
     Notes
     -----
     Requires p < n2 = N2 - 1.
@@ -240,7 +238,11 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     Y = validate_data_matrix(Y)
     N1, p = X.shape
     N2, p2 = Y.shape
-    assert p == p2, "X and Y must have the same number of columns (p)."
+    if p != p2:
+        raise ValueError("X and Y must have the same number of columns (p).")
+
+    if regularize != 0.0:
+        raise ValueError("regularize is not supported and must be 0.0.")
 
     n1 = N1 - 1
     n2 = N2 - 1
@@ -250,10 +252,6 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     # Unbiased sample covariances
     S1 = np.cov(X.T)
     S2 = np.cov(Y.T)
-
-    # Optional ridge for numerical stability of S2^{-1}
-    if regularize > 0:
-        S2 = S2 + regularize * np.eye(p)
 
     S2_inv = la.inv(S2)
     A = S1 @ S2_inv
@@ -278,10 +276,9 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     # Z-score (one-sided test: large positive values reject H0)
     Z = (Tn - (mu_Tn + p * h**2 / (1 - y2))) / np.sqrt(v_Tn)
 
-    p_one = 1 - stats.norm.cdf(Z)
-    results = {"stat": Z, "p_value": p_one}
+    p_one = stats.norm.sf(Z)
 
-    return results
+    return {"stat": float(Z), "p_value": float(p_one)}
 
 
 def proportionality_test_signs(
@@ -553,9 +550,9 @@ def proportional_cov_test_tsukuda(
     X, Y = validate_matching_data_matrices(X, Y)
     m, p = X.shape
     n, _ = Y.shape
-    if m < 4 or n < 4:
+    if m < 3 or n < 3:
         raise ValueError(
-            "Each group must have at least 4 observations (for unbiased tr(Sigma^2))."
+            "Each group must have at least 3 observations (for Tsukuda-Matsuura a2 estimator)."
         )
 
     # Sample covariances with ddof=1
@@ -568,8 +565,8 @@ def proportional_cov_test_tsukuda(
     a_y1 = np.trace(Sy) / p
     a_xy = np.trace(Sx @ Sy) / p
 
-    a_x2 = tsukuda2019._unbiased_tr_sigma2_per_p(X)
-    a_y2 = tsukuda2019._unbiased_tr_sigma2_per_p(Y)
+    a_x2 = tsukuda2019._a2_hat_tsukuda(X)
+    a_y2 = tsukuda2019._a2_hat_tsukuda(Y)
 
     # Core statistic and variance estimate
     T = (m * n / (m + n)) * (
@@ -580,10 +577,10 @@ def proportional_cov_test_tsukuda(
         (n**2) / (m**2 + n**2)
     ) * (a_y2 / (a_y1**2))
 
-    b_hat = np.sqrt(b2_hat) if b2_hat > 0 else np.nan
-    Z = T / (2.0 * b_hat) if np.isfinite(b_hat) and b_hat > 0 else np.nan
+    Z = T / (2.0 * b2_hat) if b2_hat > 0 else np.nan
 
     if single_side:
+        # Note: the paper proposes the one-sided upper-tail test.
         p_value = 1.0 - stats.norm.cdf(Z)
     else:
         p_value = 2.0 * stats.norm.sf(abs(Z))
@@ -635,7 +632,7 @@ def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
         )
 
     T_hat = (E12 / np.sqrt(E1 * E2)) - 1.0
-    z = np.sqrt(n1 * n2) * T_hat
+    z = 0.5 * np.sqrt(n1 * n2) * T_hat
 
     if alternative == "two-sided":
         p_value = 2.0 * (1.0 - stats.norm.cdf(abs(z)))
@@ -650,10 +647,5 @@ def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
 
     return {
         "stat": float(z),
-        "T_hat": float(T_hat),
-        "z": float(z),
         "p_value": float(p_value),
-        "E1": float(E1),
-        "E2": float(E2),
-        "E12": float(E12),
     }

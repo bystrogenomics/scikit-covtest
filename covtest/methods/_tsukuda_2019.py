@@ -31,3 +31,23 @@ def _unbiased_tr_sigma2_per_p(X: np.ndarray) -> float:
     denom = p * N * (N - 1) * (N - 2) * (N - 3)
     a2_hat = ((N - 2) * n * tr_V2 - N * n * tr_D2 + tr_V**2) / denom
     return a2_hat
+
+
+def _a2_hat_tsukuda(X: np.ndarray) -> float:
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array.")
+    N, p = X.shape
+    if N < 3:
+        raise ValueError("Tsukuda-Matsuura a2 estimator requires N >= 3.")
+
+    Xc = X - X.mean(axis=0, keepdims=True)
+    S = (Xc.T @ Xc) / (N - 1)
+
+    trS = np.trace(S)
+    trS2 = np.sum(S * S)
+
+    return ((N - 1) ** 2 / (p * (N - 2) * (N + 1))) * (
+        trS2 - (trS ** 2) / (N - 1)
+    )
+

@@ -18,6 +18,7 @@ from covtest.methods.hypothesis_identity import (
     xu_2023_identity,
     ahmad_2017_identity,
     test_identity_T2 as identity_T2_test,
+    ahmad_2015_identity,
     identity_covariance_test,
 )
 
@@ -206,6 +207,10 @@ def test_identity_T2_outputs(identity_data, non_identity_data):
         identity_T2_test(short_data)
 
 
+def test_ahmad_2015_identity_alias():
+    assert ahmad_2015_identity is identity_T2_test
+
+
 def test_identity_covariance_test_public_interface(identity_data, non_identity_data):
     # Standard single sample check
     res = identity_covariance_test(identity_data, method="chen_2010")
@@ -275,5 +280,20 @@ def test_srivastava_2011_pvalues_and_smoke(identity_data):
     pvals = np.array(pvals)
     assert np.mean(pvals < 0.05) < 0.15
     assert np.mean(pvals == 0.0) == 0.0
+
+
+def test_identity_T2_null_calibration():
+    import numpy as np
+    np.random.seed(42)
+    n, p, n_sims = 50, 200, 5000
+    rejections = 0
+    for _ in range(n_sims):
+        X = np.random.randn(n, p)
+        result = identity_T2_test(X, center=True)
+        if result["p_value"] < 0.05:
+            rejections += 1
+    rate = rejections / n_sims
+    # With 5000 sims, 95% CI for true 0.05 rate is roughly [0.04, 0.06]
+    assert 0.03 <= rate <= 0.08, f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
 
 
