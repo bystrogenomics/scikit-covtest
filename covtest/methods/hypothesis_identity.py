@@ -318,12 +318,14 @@ def srivastava_2005_identity(X):
     Srivastava, M. S. (2005). J. Japan Statist. Soc. 35(2), 251-272.
     """
     X = validate_data_matrix(X)
-    n = X.shape[0]
-    S = sample_covariance(X)
-    T_1 = s2005.T_1_stat(S, n)
-    z_stat = (n / 2) * T_1
-    p_value = 1 - stats.norm.cdf(z_stat)
-    return result_dict(z_stat, p_value)
+    N, p = X.shape
+    if N < 3:
+        raise ValueError("Srivastava (2005) identity test requires N >= 3.")
+
+    S = sample_covariance(X)  # centered covariance with divisor N - 1
+    statistic = _srivastava2011_(N - 1, p, S)
+    p_value = float(norm.sf(statistic))
+    return result_dict(statistic, p_value)
 
 
 def tyler_identity(X, unknown_mean=False, method="tr"):

@@ -367,4 +367,29 @@ def test_chen_xu_gram_formulas():
     assert np.isclose(delta_pkg, delta_general)
 
 
+def test_srivastava_2005_identity_scale_alternative():
+    rng = np.random.default_rng(123)
+    p = 50
+    N = 100
+    # Covariance is 4.0 * I_p (spherical but not identity)
+    X = rng.normal(scale=2.0, size=(N, p))
+
+    # 1. Identity test:
+    res = srivastava_2005_identity(X)
+    # The statistic should be large and p-value very small (rejection)
+    assert res["p_value"] < 0.01
+
+    # 2. Sphericity statistic (T1):
+    S = np.cov(X, rowvar=False)
+    # The sphericity statistic should be close to 0 because it's spherical
+    from covtest.methods._srivastava_2005 import T_1_stat
+    t1 = T_1_stat(S, N - 1)
+    assert abs(t1) < 0.1
+
+    # 3. Guard N < 3 raises ValueError
+    X_short = rng.normal(size=(2, p))
+    with pytest.raises(ValueError, match="requires N >= 3"):
+        srivastava_2005_identity(X_short)
+
+
 
