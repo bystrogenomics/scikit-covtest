@@ -413,13 +413,17 @@ def fisher_single_sample(X, Sigma="identity"):
     Fisher, T. J. (2012). J. Statistical Planning & Inference 142, 312-326.
     """
     X = validate_data_matrix(X)
-    p = X.shape[1]
-    n = X.shape[0]
+    N, p = X.shape
+    n_eff = N - 1
+
+    if n_eff <= 3:
+        raise ValueError("Fisher (2012) T2 requires N >= 5 samples.")
+
     S = sample_covariance(X)
     S_ = _covariance_under_null(S, Sigma)
 
-    statistic = _fisher_2012_stat_(n - 1, p, S_)
-    p_value = 2 * (1 - norm.cdf(abs(statistic)))
+    statistic = _fisher_2012_stat_(n_eff, p, S_)
+    p_value = float(norm.sf(statistic))
 
     return result_dict(statistic, p_value)
 

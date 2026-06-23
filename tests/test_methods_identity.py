@@ -120,6 +120,13 @@ def test_invalid_sigma_raises(identity_data):
         srivastava2011_single_sample(identity_data, Sigma=bad_sigma)
 
 
+def test_fisher_validation_short_data():
+    rng = np.random.default_rng(42)
+    short_data = rng.normal(size=(4, 5))
+    with pytest.raises(ValueError, match=r"Fisher \(2012\) T2 requires N >= 5 samples."):
+        fisher_single_sample(short_data)
+
+
 def test_one_sample_cov_test(identity_data):
     res = one_sample_cov_test(identity_data)
     assert set(res.keys()) == {"p_value", "z_value", "lrt"}
