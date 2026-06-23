@@ -9,76 +9,12 @@ from scipy.stats import chi2
 
 from . import _cheng_2019 as cheng2019
 from . import _eriksen_1987 as eriksen1987
-from . import _flurry_1986 as flurry1986
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
 from . import _ahmad2022 as ahmad2022
 from .utils import validate_data_matrix, validate_matching_data_matrices
 
 ArrayLike = np.ndarray
-
-##########
-# Flurry #
-##########
-
-
-def flury_proportionality_test(
-    X,
-    Y,
-    max_iter: int = 1000,
-    tol: float = 1e-9,
-    ridge: float = 0.0,
-    init_c: Optional[np.ndarray] = None,
-):
-    """Flury's test for proportional covariance matrices.
-
-    Tests H0: Sigma_1 = c_1 * Sigma, Sigma_2 = c_2 * Sigma for
-    some common Sigma and constants c_1, c_2 > 0.
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples_1, n_features)
-        First sample data matrix.
-    Y : array-like of shape (n_samples_2, n_features)
-        Second sample data matrix.
-    max_iter : int, default=1000
-        Maximum iterations for MLE convergence.
-    tol : float, default=1e-9
-        Convergence tolerance.
-    ridge : float, default=0.0
-        Ridge regularization parameter.
-    init_c : array-like, optional
-        Initial values for proportionality constants.
-
-    Returns
-    -------
-    result : dict
-        Test results including statistic and p-value.
-
-    References
-    ----------
-    .. [1] Flury, B. K. (1986). "Proportionality of k covariance
-           matrices." Statistics & Probability Letters, 4(1), 29-33.
-    """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-    X_list = [X, Y]
-    S_list = []
-    n_list = []
-    for X in X_list:
-        X = np.asarray(X, float)
-        n_i, p_i = X.shape
-        if not S_list:
-            p = p_i
-        elif p_i != p:
-            raise ValueError(
-                "All groups must have the same number of variables p."
-            )
-        S_list.append(flurry1986._cov_mle(X))
-        n_list.append(n_i)
-    return flurry1986.flury_proportionality_test_from_cov(
-        S_list, n_list, max_iter=max_iter, tol=tol, ridge=ridge, init_c=init_c
-    )
 
 
 ################
