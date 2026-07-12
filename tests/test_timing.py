@@ -4,7 +4,6 @@ import pytest
 
 from covtest.methods.hypothesis_spherical import (
     john_sphericity,
-    sk_test,
     srivastava_2005_sphericity,
 )
 from covtest.testing.timing import (
@@ -24,7 +23,6 @@ def methods():
     return {
         "john_sphericity": john_sphericity,
         "srivastava_2005_sphericity": srivastava_2005_sphericity,
-        "sk_test": sk_test,
     }
 
 

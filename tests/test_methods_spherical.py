@@ -3,14 +3,11 @@ import pytest
 
 from covtest.methods.hypothesis_spherical import (
     _john_stat,
-    _spatial_sign_rows,
-    _U_tensor,
     bartlett_sphericity_test,
     czz_sphericity_test,
     fisher_2010_sphericity_test,
     hu_2019_sphericity_test,
     john_sphericity,
-    sk_test,
     srivastava_2005_sphericity,
     srivastava_2014_sphericity_test,
     xu_2023_sphericity_test,
@@ -65,33 +62,8 @@ def test_srivastava_output(identity_data):
     assert 0 <= res["p_value"] <= 1
 
 
-def test_spatial_sign_rows_and_tensor(identity_data):
-    A = identity_data[:5, :]  # small slice
-    signs = _spatial_sign_rows(A)
-    assert np.allclose(np.linalg.norm(signs, axis=1), 1.0, atol=1e-8)
-
-    U = _U_tensor(A)
-    n, _, p = U.shape
-    assert U.shape == (A.shape[0], A.shape[0], A.shape[1])
-    assert np.allclose(U[np.arange(n), np.arange(n)], 0.0)
-
-
-def test_sk_test_output(identity_data):
-    res = sk_test(identity_data)
-    assert set(res.keys()) == {"stat", "p_value"}
-    assert isinstance(res["stat"], float)
-    assert 0 <= res["p_value"] <= 1
-
-
-def test_sk_test_rejects_small_n():
-    X = np.random.normal(size=(3, 2))
-    with pytest.raises(ValueError):
-        sk_test(X)
-
-
 def test_non_spherical_data_gives_signal(non_spherical_data):
     john_res = john_sphericity(non_spherical_data)
-    sk_res = sk_test(non_spherical_data)
     czz_res = czz_sphericity_test(non_spherical_data)
     sriv_14_res = srivastava_2014_sphericity_test(non_spherical_data)
     fish_10_res = fisher_2010_sphericity_test(non_spherical_data)
@@ -101,7 +73,6 @@ def test_non_spherical_data_gives_signal(non_spherical_data):
     # Expect evidence against null, so p-value should not be 1
     thresh = 0.1
     assert john_res["p_value"] < thresh
-    assert sk_res["p_value"] < thresh
     assert czz_res["p_value"] < thresh
     assert sriv_14_res["p_value"] < thresh
     assert fish_10_res["p_value"] < thresh
