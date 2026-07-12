@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.stats as stats  # type: ignore
 
-from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
 from . import _ahmad as ahmad2015
 from .utils import (
@@ -452,53 +451,6 @@ def czz_sphericity_test(X, center=False):
     p_norm = float(1.0 - stats.norm.cdf(Z))  # right-tailed
 
     return result_dict(float(Z), p_norm)
-
-
-def hallin_rank_sphericity_test(X, method="wilcoxon"):
-    """Van der Waerden or Wilcoxon rank-based test for sphericity.
-
-    Tests the null hypothesis of sphericity using spatial ranks.
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples, n_features)
-        The input data matrix.
-    method : {"wilcoxon", "vdw"}, default="wilcoxon"
-        Rank-based score function to use.
-
-    Returns
-    -------
-    result : dict
-        A dictionary containing:
-        - 'stat' : float
-            The computed test statistic Q.
-        - 'p_value' : float
-            The computed p-value.
-    """
-    X = validate_data_matrix(X)
-    if method not in {"wilcoxon", "vdw"}:
-        raise ValueError("Unrecognized method %s" % method)
-
-    n, k = X.shape
-    U, d = hallin2006._center_and_scale(X)
-    ranks = stats.rankdata(d, method="average")
-    u = ranks / (n + 1)
-
-    if method == "wilcoxon":
-        scores = u - 0.5
-        score_var = 1 / 12
-    else:
-        u = np.clip(u, 1e-6, 1 - 1e-6)
-
-        raw_scores = stats.chi.ppf(u, df=k)
-        scores = raw_scores - np.mean(raw_scores)
-        score_var = np.var(raw_scores, ddof=0)
-
-    Q = hallin2006._compute_statistic(U, scores, k, score_var)
-    df = k * (k + 1) // 2 - 1
-    pval = 1 - stats.chi2.cdf(Q, df)
-
-    return result_dict(Q, pval)
 
 
 def _gram_aggregates(X):

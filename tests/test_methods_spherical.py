@@ -8,7 +8,6 @@ from covtest.methods.hypothesis_spherical import (
     bartlett_sphericity_test,
     czz_sphericity_test,
     fisher_2010_sphericity_test,
-    hallin_rank_sphericity_test,
     hu_2019_sphericity_test,
     john_sphericity,
     sk_test,
@@ -59,18 +58,6 @@ def test_bartlet_output(identity_data):
     assert 0 <= res["p_value"] <= 1
 
 
-def test_hallin_output(identity_data):
-    res = hallin_rank_sphericity_test(identity_data)
-    assert "stat" in res and "p_value" in res
-    assert isinstance(res["stat"], float)
-    assert 0 <= res["p_value"] <= 1
-
-    res = hallin_rank_sphericity_test(identity_data, method="vdw")
-    assert "stat" in res and "p_value" in res
-    assert isinstance(res["stat"], float)
-    assert 0 <= res["p_value"] <= 1
-
-
 def test_srivastava_output(identity_data):
     res = srivastava_2005_sphericity(identity_data)
     assert "stat" in res and "p_value" in res
@@ -105,8 +92,6 @@ def test_sk_test_rejects_small_n():
 def test_non_spherical_data_gives_signal(non_spherical_data):
     john_res = john_sphericity(non_spherical_data)
     sk_res = sk_test(non_spherical_data)
-    hl_res1 = hallin_rank_sphericity_test(non_spherical_data, method="wilcoxon")
-    hl_res2 = hallin_rank_sphericity_test(non_spherical_data, method="vdw")
     czz_res = czz_sphericity_test(non_spherical_data)
     sriv_14_res = srivastava_2014_sphericity_test(non_spherical_data)
     fish_10_res = fisher_2010_sphericity_test(non_spherical_data)
@@ -117,8 +102,6 @@ def test_non_spherical_data_gives_signal(non_spherical_data):
     thresh = 0.1
     assert john_res["p_value"] < thresh
     assert sk_res["p_value"] < thresh
-    assert hl_res1["p_value"] < thresh
-    assert hl_res2["p_value"] < thresh
     assert czz_res["p_value"] < thresh
     assert sriv_14_res["p_value"] < thresh
     assert fish_10_res["p_value"] < thresh
