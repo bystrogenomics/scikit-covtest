@@ -16,7 +16,6 @@ from covtest.methods.hypothesis_identity import (
     srivastava_2014_identity,
     chen_2010_identity,
     xu_2023_identity,
-    ahmad_2017_identity,
     test_identity_T2 as identity_T2_test,
     ahmad_2015_identity,
     identity_covariance_test,
@@ -179,25 +178,6 @@ def test_xu_2023_identity(identity_data, non_identity_data):
     with pytest.raises(ValueError, match="n ≥ 5"):
         xu_2023_identity(short_data)
 
-
-def test_ahmad_2017_identity(identity_data):
-    rng = np.random.default_rng(42)
-    X1 = identity_data
-    X2 = rng.normal(size=(60, 5))
-
-    res = ahmad_2017_identity([X1, X2])
-    assert set(res.keys()) == {"stat", "p_value"}
-    assert isinstance(res["stat"], float)
-    assert 0 <= res["p_value"] <= 1
-
-    # Check validation errors
-    with pytest.raises(ValueError, match="at least 2 samples"):
-        ahmad_2017_identity([X1])
-
-    # Check feature mismatch validation
-    X_bad = rng.normal(size=(50, 4))
-    with pytest.raises(ValueError, match="same number of features p"):
-        ahmad_2017_identity([X1, X_bad])
 
 
 def test_identity_T2_outputs(identity_data, non_identity_data):

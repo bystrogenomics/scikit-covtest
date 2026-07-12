@@ -30,14 +30,6 @@ High-dimensional, U-statistic / non-normal:
 LRT-based:
   one_sample_cov_test           Likelihood Ratio Test
 
-2. Multi-Sample / Common-Covariance Tests (Internal / Advanced)
-----------------------------------------------------------------
-These tests are not omnibus tests of equality of covariance matrices. They generally
-assume covariance homogeneity and evaluate secondary hypotheses:
-
-  ahmad_2017_identity           Assumes Sigma_1 = ... = Sigma_g = Sigma,
-                                and tests whether the common Sigma = I_p.
-
 References
 ----------
 Nagao, H. (1973). Annals of Statistics 1(4), 700-709.
@@ -53,7 +45,6 @@ Chen, S. X., Zhang, L.-X. & Zhong, P.-S. (2010).
     J. American Statistical Association 105(490), 810-819.
 Srivastava, M. S., Yanagihara, H. & Kubokawa, T. (2014).
     J. Multivariate Analysis 130, 289-309.
-Ahmad, M. R. (2017). Scandinavian J. Statistics 44, 500-523.
 Xu, G. et al. (2023 / 2025). Scandinavian J. Statistics 52, 249-269.
 """
 
@@ -687,100 +678,6 @@ def xu_2023_identity(X):
     p_value = float(norm.sf(stat))
     return result_dict(stat, p_value)
 
-
-def ahmad_2017_identity(Xs):
-    """
-    Ahmad (2017) multi-sample test for a common identity covariance matrix.
-
-    .. warning::
-       [INTERNAL / ADVANCED] This method is not an omnibus test of H0: Sigma_i = I
-       under heterogeneous alternatives. It requires g >= 2 and assumes a common 
-       covariance matrix across groups (covariance homogeneity), testing whether 
-       this common covariance is identity.
-
-    The test statistic is (equations 5 and 22–23 of the paper):
-
-        T_b = C₃/p − 2·C₁/p + 1
-
-    where
-        C₁ = Q-weighted average of Bᵢ = tr(Sᵢ)  (estimator of tr(Σ))
-        C₂ = 1/[g(g−1)] Σᵢ≠ⱼ BᵢBⱼ             (estimator of [tr(Σ)]²)
-        C₃ = Σᵢ≠ⱼ P(nᵢ,nⱼ)·Bᵢⱼ / P*           (estimator of tr(Σ²))
-
-    and Bᵢ = tr(Sᵢ) (trace of sample covariance of population i),
-    Bᵢⱼ = tr(SᵢSⱼ) (cross-trace of sample covariances).
-
-    Under H₀ (Theorem 5 of the paper):  Values standardise to a standard normal:
-    stat = sqrt(P*/4) * T_b -> N(0, 1)
-
-    where P* = Σᵢ≠ⱼ Q(nᵢ)·Q(nⱼ) and Q(nᵢ) = nᵢ(nᵢ-1).
-
-    The two-sample (g=2) and multi-sample (g≥2) cases are handled by the
-    same formula; for g=2 this reduces to equations (13)–(15) of the paper.
-
-    Parameters
-    ----------
-    Xs : list of array-like, each of shape (nᵢ, p)
-        Data matrices from g ≥ 2 populations. All must have the same p.
-
-    Returns
-    -------
-    result : dict  with keys 'stat' (standardised T_b) and 'p_value' (upper-tail).
-
-    References
-    ----------
-    Ahmad, M. R. (2017).
-    "Location-invariant Multi-sample U-tests for Covariance Matrices
-    with Large Dimension."
-    Scandinavian Journal of Statistics, 44, 500-523.
-    https://doi.org/10.1111/sjos.12262
-    """
-    if len(Xs) < 2:
-        raise ValueError(
-            "ahmad_2017_identity requires at least 2 samples (g ≥ 2)."
-        )
-
-    g = len(Xs)
-    arrays = [validate_data_matrix(np.asarray(X, dtype=np.float64)) for X in Xs]
-    p = arrays[0].shape[1]
-    if not all(A.shape[1] == p for A in arrays):
-        raise ValueError("All samples must have the same number of features p.")
-
-    # ── per-sample quantities ─────────────────────────────────────────────
-    ns = [A.shape[0] for A in arrays]  # sample sizes nᵢ
-    Qs = [ni * (ni - 1) for ni in ns]  # Q(nᵢ) = nᵢ(nᵢ-1)
-
-    # Sample covariances (p×p)
-    Ss = []
-    for A in arrays:
-        Ac = A - A.mean(axis=0)
-        Ss.append(Ac.T @ Ac / (A.shape[0] - 1))
-
-    # Bᵢ = tr(Sᵢ)  (unbiased estimator of tr(Σᵢ))
-    Bs = [float(np.trace(Si)) for Si in Ss]
-
-    # ── pooled estimators ─────────────────────────────────────────────────
-    sum_Q = sum(Qs)
-    C1 = sum(Qs[i] * Bs[i] for i in range(g)) / sum_Q
-
-    P_star_Q = 0.0
-    C3_num = 0.0
-    for i in range(g):
-        for j in range(g):
-            if i != j:
-                Pij = float(Qs[i] * Qs[j])  # P(nᵢ,nⱼ) = Q(nᵢ)·Q(nⱼ)
-                Bij = float(np.trace(Ss[i] @ Ss[j]))
-                P_star_Q += Pij
-                C3_num += Pij * Bij
-    C3 = C3_num / P_star_Q
-
-    T_b = C3 / p - 2.0 * C1 / p + 1.0
-    P_n = float(
-        sum(ns[i] * ns[j] for i in range(g) for j in range(g) if i != j)
-    )
-    stat = float(np.sqrt(P_n / 4.0) * T_b)
-    p_value = float(norm.sf(stat))
-    return result_dict(stat, p_value)
 
 
 def identity_covariance_test(X, method="chen_2010", **kwargs):
