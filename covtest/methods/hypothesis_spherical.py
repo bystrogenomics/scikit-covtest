@@ -3,7 +3,7 @@ import scipy.stats as stats  # type: ignore
 
 from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
-from . import _ahmad2015 as ahmad2015
+from . import _ahmad as ahmad2015
 from .utils import (
     covariance_traces,
     result_dict,

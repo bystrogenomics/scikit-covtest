@@ -5,13 +5,12 @@ import numpy.linalg as la
 import scipy.stats as stats
 from numpy.linalg import inv, slogdet
 from scipy.integrate import quad
-from scipy.stats import chi2
 
 from . import _cheng_2019 as cheng2019
 from . import _eriksen_1987 as eriksen1987
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
-from . import _ahmad2022 as ahmad2022
+from . import _ahmad as ahmad2022
 from .utils import validate_data_matrix, validate_matching_data_matrices
 
 ArrayLike = np.ndarray
@@ -35,8 +34,8 @@ def bootstrap_bartlett_adjusted_proportionality_test(
     """
     Bootstrap Bartlett-adjusted Wilks LRT for proportional covariance matrices.
 
-    This function performs a parametric-bootstrap Bartlett-style calibration of the 
-    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic 
+    This function performs a parametric-bootstrap Bartlett-style calibration of the
+    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic
     Bartlett adjustment (Theorem 6.1 of Eriksen 1987).
 
     Parameters
@@ -52,7 +51,7 @@ def bootstrap_bartlett_adjusted_proportionality_test(
         Number of parametric bootstrap replicates to estimate the Bartlett factor.
     refit_mle_each_boot : bool, default True
         If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap replicate.
-        Highly recommended. If False, the null model is not re-maximized, which 
+        Highly recommended. If False, the null model is not re-maximized, which
         means it is not a true LRT bootstrap calibration.
     random_state : int or np.random.Generator, optional
         RNG seed or Generator.
@@ -72,6 +71,7 @@ def bootstrap_bartlett_adjusted_proportionality_test(
 
 def bartlett_adjusted_proportionality_test(*args, **kwargs):
     import warnings
+
     warnings.warn(
         "bartlett_adjusted_proportionality_test is deprecated; "
         "use bootstrap_bartlett_adjusted_proportionality_test instead.",

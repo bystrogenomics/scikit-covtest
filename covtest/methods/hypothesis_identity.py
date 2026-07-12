@@ -54,9 +54,8 @@ import scipy.stats as stats
 from numpy.linalg import slogdet
 from scipy.stats import norm
 
-from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
-from . import _ahmad2015 as ahmad2015
+from . import _ahmad as ahmad2015
 from . import _srivastava_yanagihara as sya
 from . import _chen_xu_gram as cxg
 from .utils import (
@@ -199,7 +198,7 @@ def test_identity_T2(
     # We subtract this finite-sample correction so that (n/2)*T2_corrected
     # is mean-zero under the null for any p/n ratio.
     if center:
-        T2 = T2 - p / (n ** 2)
+        T2 = T2 - p / (n**2)
 
     z, used_cal = ahmad2015._standardize_T(
         T2, n=n, p=p, calibration=calibration
@@ -422,12 +421,12 @@ def fisher_single_sample(X, Sigma="identity"):
 def srivastava2011_single_sample(X, Sigma="identity"):
     """Srivastava (2011) test for covariance matrix structure.
 
-    Tests the null hypothesis H0: Sigma = Sigma0, where Sigma0 defaults to 
-    the identity matrix (Sigma0 = I_p). Note that Sigma="identity" and 
+    Tests the null hypothesis H0: Sigma = Sigma0, where Sigma0 defaults to
+    the identity matrix (Sigma0 = I_p). Note that Sigma="identity" and
     Sigma=np.eye(p) are equivalent.
 
     Rejection is based on large positive values of the test statistic. Thus,
-    this function returns an upper-tail p-value. It expects a single sample 
+    this function returns an upper-tail p-value. It expects a single sample
     data matrix X, not multiple groups.
 
     Parameters
@@ -679,7 +678,6 @@ def xu_2023_identity(X):
     return result_dict(stat, p_value)
 
 
-
 def identity_covariance_test(X, method="chen_2010", **kwargs):
     """Clean public wrapper for single-sample identity covariance test.
 
@@ -754,4 +752,3 @@ def identity_covariance_test(X, method="chen_2010", **kwargs):
         "stat": float(stat),
         "p_value": float(p_value),
     }
-

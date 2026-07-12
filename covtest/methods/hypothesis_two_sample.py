@@ -4,7 +4,7 @@ import numpy as np
 import numpy.linalg as la
 from scipy.stats import chi2, f, norm  # type: ignore
 
-from . import _ahmad2017 as ahmad2017
+from . import _ahmad as ahmad2017
 from . import _cai as cai
 from . import _chang as chang
 from . import _ding as ding2023
@@ -742,7 +742,6 @@ def cai_2013_two_sample(X: np.ndarray, Y: np.ndarray) -> dict:
     """
     res = cai_liu_xia_2013_two_sample_test(X, Y)
     return result_dict(res["t"], res["p_value"])
-
 
 
 def he_2018_two_sample(

@@ -20,7 +20,9 @@ def _ensure_pd(A, ridge):
 
 def _c_from_sigma(Sigma, S_list, p, ridge=0.0):
     Sigma_inv = inv(_ensure_pd(Sigma, ridge))
-    return np.array([np.trace(Sigma_inv @ _ensure_pd(S, ridge)) / p for S in S_list])
+    return np.array(
+        [np.trace(Sigma_inv @ _ensure_pd(S, ridge)) / p for S in S_list]
+    )
 
 
 def _validate_inputs(X_groups, S_list, n_list, ridge):
@@ -35,7 +37,9 @@ def _validate_inputs(X_groups, S_list, n_list, ridge):
             if X.ndim != 2:
                 raise ValueError(f"Group {k} must be a 2D array.")
             if X.shape[1] != p:
-                raise ValueError("All groups must have the same number of features p.")
+                raise ValueError(
+                    "All groups must have the same number of features p."
+                )
             N_k = X.shape[0]
             if N_k < p + 1:
                 raise ValueError(
@@ -60,7 +64,9 @@ def _validate_inputs(X_groups, S_list, n_list, ridge):
         raise ValueError("S_list and n_list must have the same length.")
 
     if p < 2:
-        raise ValueError("p must be at least 2 (proportionality is vacuous for p=1).")
+        raise ValueError(
+            "p must be at least 2 (proportionality is vacuous for p=1)."
+        )
 
     for k, n_val in enumerate(n_list):
         if n_val <= 0:
@@ -71,11 +77,13 @@ def _validate_inputs(X_groups, S_list, n_list, ridge):
             raise ValueError(f"S_{k} must be a square matrix.")
         if S.shape[0] != p:
             raise ValueError(f"S_{k} must have shape ({p}, {p}).")
-        
+
         # Positive definiteness check: fail early if logdet is not positive
         sign, logdet = np.linalg.slogdet(_ensure_pd(S, ridge))
         if sign <= 0:
-            raise ValueError(f"Sample covariance matrix S_{k} is not positive definite.")
+            raise ValueError(
+                f"Sample covariance matrix S_{k} is not positive definite."
+            )
 
     return S_list, n_list, K, p
 
@@ -97,7 +105,7 @@ def fit_proportional_covariances(
     else:
         p = 1
     n_list = np.asarray(n_list, dtype=float)
-    
+
     if len(S_list) != len(n_list):
         raise ValueError("S_list and n_list must have the same length.")
     if p < 2:
@@ -217,8 +225,8 @@ def bootstrap_bartlett_adjusted_proportionality_test(
     """
     Bootstrap Bartlett-adjusted Wilks LRT for proportional covariance matrices.
 
-    This function performs a parametric-bootstrap Bartlett-style calibration of the 
-    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic 
+    This function performs a parametric-bootstrap Bartlett-style calibration of the
+    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic
     Bartlett adjustment (Theorem 6.1 of Eriksen 1987).
 
     Parameters
@@ -234,12 +242,13 @@ def bootstrap_bartlett_adjusted_proportionality_test(
         Number of parametric bootstrap replicates to estimate the Bartlett factor.
     refit_mle_each_boot : bool, default True
         If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap replicate.
-        Highly recommended. If False, the null model is not re-maximized, which 
+        Highly recommended. If False, the null model is not re-maximized, which
         means it is not a true LRT bootstrap calibration.
     random_state : int or np.random.Generator, optional
         RNG seed or Generator.
     """
     import warnings
+
     if not refit_mle_each_boot:
         warnings.warn(
             "refit_mle_each_boot=False is not a true LRT bootstrap calibration "
@@ -322,6 +331,7 @@ def bootstrap_bartlett_adjusted_proportionality_test(
 
 def bartlett_adjusted_proportionality_test(*args, **kwargs):
     import warnings
+
     warnings.warn(
         "bartlett_adjusted_proportionality_test is deprecated; "
         "use bootstrap_bartlett_adjusted_proportionality_test instead.",

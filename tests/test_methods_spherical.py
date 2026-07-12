@@ -228,7 +228,7 @@ def test_muirhead_sphericity_lrt(identity_data, non_spherical_data):
 
 
 def test_standardize_T_values():
-    from covtest.methods._ahmad2015 import _standardize_T
+    from covtest.methods._ahmad import _standardize_T
 
     # Test values: T=0.01, n=1000, p=80
     # Expected: z = (n / 2.0) * T = (1000 / 2) * 0.01 = 5.0

@@ -139,4 +139,3 @@ def test_chang2016(data_two_groups):
     res = chang2016(X1, X2, J=10)
     assert set(res.keys()) == {"stat", "p_value"}
     assert 0 <= res["p_value"] <= 1
-

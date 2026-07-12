@@ -3,7 +3,6 @@ import pytest
 
 from covtest.methods.hypothesis_proportionality import (
     ahmad_2022_proportionality_test,
-    bartlett_adjusted_proportionality_test,
     bootstrap_bartlett_adjusted_proportionality_test,
     proportional_cov_test_tsukuda,
     proportionality_plrt,
@@ -90,7 +89,8 @@ def test_proportionality_methods_alternative_power(method):
     # Not strict: allow some failure due to finite sample
     threshold = (
         0.75
-        if method.__name__ in ("ahmad_2022_proportionality_test", "proportional_cov_test_tsukuda")
+        if method.__name__
+        in ("ahmad_2022_proportionality_test", "proportional_cov_test_tsukuda")
         else 0.7
     )
     assert res["p_value"] < threshold
@@ -107,7 +107,7 @@ def test_proportionality_lz_regularization_numerical_stability():
 
 def test_ahmad_2022_helpers():
     """Test the estimators in _ahmad2022.py module directly."""
-    from covtest.methods import _ahmad2022 as ahmad2022
+    from covtest.methods import _ahmad as ahmad2022
 
     rng = np.random.default_rng(42)
     X1 = rng.standard_normal((50, 10))
@@ -138,11 +138,8 @@ def test_ahmad_2022_helpers():
 def test_tsukuda_matsuura_regression_and_properties():
     # 1. Confirm that helper matches the closed-form Tsukuda-Matsuura estimator on a small deterministic matrix
     from covtest.methods._tsukuda_2019 import _a2_hat_tsukuda
-    X_det = np.array([
-        [1.0, 2.0],
-        [3.0, 5.0],
-        [2.0, -1.0]
-    ])
+
+    X_det = np.array([[1.0, 2.0], [3.0, 5.0], [2.0, -1.0]])
     # Manual calculation yields 18.25
     a2_det = _a2_hat_tsukuda(X_det)
     assert np.allclose(a2_det, 18.25)
@@ -152,9 +149,9 @@ def test_tsukuda_matsuura_regression_and_properties():
     rng = np.random.default_rng(1234)
     X = rng.standard_normal((10, 5))
     Y = rng.standard_normal((10, 5))
-    
+
     res = proportional_cov_test_tsukuda(X, Y)
-    
+
     # Manual implementation step-by-step
     m, p = X.shape
     n, _ = Y.shape
@@ -162,23 +159,23 @@ def test_tsukuda_matsuura_regression_and_properties():
     Yc = Y - Y.mean(axis=0, keepdims=True)
     Sx = (Xc.T @ Xc) / (m - 1)
     Sy = (Yc.T @ Yc) / (n - 1)
-    
+
     a_x1 = np.trace(Sx) / p
     a_y1 = np.trace(Sy) / p
     a_xy = np.trace(Sx @ Sy) / p
     a_x2 = _a2_hat_tsukuda(X)
     a_y2 = _a2_hat_tsukuda(Y)
-    
+
     T = (m * n / (m + n)) * (
         a_x2 / (a_x1**2) + a_y2 / (a_y1**2) - 2.0 * a_xy / (a_x1 * a_y1)
     )
     b2_hat = ((m**2) / (m**2 + n**2)) * (a_x2 / (a_x1**2)) + (
         (n**2) / (m**2 + n**2)
     ) * (a_y2 / (a_y1**2))
-    
+
     Z_correct = T / (2.0 * b2_hat)
     Z_incorrect_sqrt = T / (2.0 * np.sqrt(b2_hat))
-    
+
     # Z_correct and Z_incorrect_sqrt should be different (provided b2_hat != 1.0)
     assert not np.allclose(Z_correct, Z_incorrect_sqrt)
     # The returned stat must be Z_correct
@@ -195,10 +192,10 @@ def test_tsukuda_matsuura_regression_and_properties():
     n_samples = 30
     cov_x = np.eye(p_dim)
     cov_y = 4.0 * cov_x
-    
+
     X_prop = rng.multivariate_normal(np.zeros(p_dim), cov_x, size=n_samples)
     Y_prop = rng.multivariate_normal(np.zeros(p_dim), cov_y, size=n_samples)
-    
+
     res_prop = proportional_cov_test_tsukuda(X_prop, Y_prop)
     # Scale Y_prop further
     res_prop_scaled = proportional_cov_test_tsukuda(X_prop, 5.0 * Y_prop)
@@ -213,17 +210,17 @@ def test_tsukuda_anisotropic_diagonal_h0():
     p = 50
     n1 = 100
     n2 = 100
-    
+
     # Diagonal elements from 1 to p
     diag_elements = np.arange(1, p + 1, dtype=float)
     Sigma_x = np.diag(diag_elements)
     Sigma_y = 5.0 * Sigma_x
-    
+
     X = rng.multivariate_normal(np.zeros(p), Sigma_x, size=n1)
     Y = rng.multivariate_normal(np.zeros(p), Sigma_y, size=n2)
-    
+
     res = proportional_cov_test_tsukuda(X, Y)
-    
+
     # Assert result conforms to dict shape and has reasonable non-rejection behavior under H0
     assert_result_dict_2samp(res)
     # Under H0, the p-value shouldn't be extremely small (e.g. not rejecting at alpha = 0.05 / 0.01)
@@ -232,22 +229,23 @@ def test_tsukuda_anisotropic_diagonal_h0():
 
 def test_lz_proportionality_additional_verifications():
     import scipy.stats as stats
+
     rng = np.random.default_rng(123)
     X = rng.standard_normal((60, 25))
     Y = rng.standard_normal((60, 25))
-    
+
     res = proportionality_test_LZ(X, Y)
-    
+
     # 1. The function returns exactly the keys {"stat", "p_value"}
     assert set(res.keys()) == {"stat", "p_value"}
-    
+
     # 2. p_value == stats.norm.sf(stat) up to floating-point tolerance
     assert np.allclose(res["p_value"], stats.norm.sf(res["stat"]))
-    
+
     # 3. Passing regularize > 0 raises a ValueError
     with pytest.raises(ValueError, match="regularize is not supported"):
         proportionality_test_LZ(X, Y, regularize=0.1)
-        
+
     # 4. Mismatched feature dimensions raise a ValueError rather than an AssertionError
     X_mis = rng.standard_normal((60, 25))
     Y_mis = rng.standard_normal((60, 26))
@@ -259,41 +257,42 @@ def test_eriksen_proportionality_verifications():
     from covtest.methods._eriksen_1987 import (
         test_cov_proportionality,
         bootstrap_bartlett_adjusted_proportionality_test,
-        bartlett_adjusted_proportionality_test as deprecated_bartlett
+        bartlett_adjusted_proportionality_test as deprecated_bartlett,
     )
+
     rng = np.random.default_rng(12345)
     p = 3
     n1, n2 = 10, 12
     Sigma1 = np.eye(p)
     Sigma2 = 2.5 * Sigma1
-    
+
     # Generate data under H0: proportional covariances
     X_null = rng.multivariate_normal(np.zeros(p), Sigma1, size=n1)
     Y_null = rng.multivariate_normal(np.zeros(p), Sigma2, size=n2)
-    
+
     # 1. Non-negative statistic and p-value in [0, 1]
     res_null = test_cov_proportionality(X_groups=[X_null, Y_null])
     assert res_null["stat"] >= 0
     assert 0 <= res_null["p_value"] <= 1
-    
+
     # 2. Under a non-proportional alternative, statistic is larger
     # Generate data under alternative: non-proportional
     Sigma2_alt = Sigma2.copy()
     Sigma2_alt[0, 0] *= 10.0
     X_alt = rng.multivariate_normal(np.zeros(p), Sigma1, size=n1)
     Y_alt = rng.multivariate_normal(np.zeros(p), Sigma2_alt, size=n2)
-    
+
     res_alt = test_cov_proportionality(X_groups=[X_alt, Y_alt])
     assert res_alt["stat"] > res_null["stat"]
-    
+
     # 3. Scale invariance: multiplying one group's observations by a positive scalar
     res_scaled = test_cov_proportionality(X_groups=[X_null, 3.5 * Y_null])
     assert np.allclose(res_null["stat"], res_scaled["stat"], atol=1e-10)
-    
+
     # 4. Group-order invariance: swapping X and Y
     res_swapped = test_cov_proportionality(X_groups=[Y_null, X_null])
     assert np.allclose(res_null["stat"], res_swapped["stat"], atol=1e-10)
-    
+
     # 5. Return-key test: check keys of bootstrap function
     res_boot = bootstrap_bartlett_adjusted_proportionality_test(
         X_groups=[X_null, Y_null], B=30, random_state=42
@@ -308,39 +307,41 @@ def test_eriksen_proportionality_verifications():
     assert "p_value_bootstrap_adj" in res_boot
     assert "mean_T_bootstrap" in res_boot
     assert "cov_hat_groups" in res_boot
-    
+
     # Verify deprecated wrapper raises warning
     with pytest.deprecated_call():
         res_dep = deprecated_bartlett(
             X_groups=[X_null, Y_null], B=30, random_state=42
         )
     assert np.allclose(res_boot["stat"], res_dep["stat"])
-    
+
     # 6. Invalid inputs validation checks
     # p == 1
     X_p1 = rng.standard_normal((10, 1))
     Y_p1 = rng.standard_normal((10, 1))
     with pytest.raises(ValueError, match="p must be at least 2"):
         test_cov_proportionality(X_groups=[X_p1, Y_p1])
-        
+
     # Singular sample covariance (N < p + 1 observations)
     X_sing = rng.standard_normal((3, 4))
     Y_sing = rng.standard_normal((10, 4))
-    with pytest.raises(ValueError, match=r"must have at least p\+1 observations"):
+    with pytest.raises(
+        ValueError, match=r"must have at least p\+1 observations"
+    ):
         test_cov_proportionality(X_groups=[X_sing, Y_sing])
-        
+
     # Mismatched dimensions (columns)
     X_mis = rng.standard_normal((10, 3))
     Y_mis = rng.standard_normal((12, 4))
     with pytest.raises(ValueError, match="same number of features p"):
         test_cov_proportionality(X_groups=[X_mis, Y_mis])
-        
+
     # Nonpositive n_list / S_list mismatch
     S_list = [np.eye(3), np.eye(3)]
     n_list = [10, -5]
     with pytest.raises(ValueError, match="n_1 must be positive"):
         test_cov_proportionality(S_list=S_list, n_list=n_list)
-        
+
     # 7. Reproducibility with random_state fixed
     res_boot1 = bootstrap_bartlett_adjusted_proportionality_test(
         X_groups=[X_null, Y_null], B=50, random_state=123
@@ -350,6 +351,3 @@ def test_eriksen_proportionality_verifications():
     )
     assert np.allclose(res_boot1["stat"], res_boot2["stat"])
     assert np.allclose(res_boot1["p_value"], res_boot2["p_value"])
-
-
-

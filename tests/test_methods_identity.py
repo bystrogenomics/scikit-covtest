@@ -122,7 +122,9 @@ def test_invalid_sigma_raises(identity_data):
 def test_fisher_validation_short_data():
     rng = np.random.default_rng(42)
     short_data = rng.normal(size=(4, 5))
-    with pytest.raises(ValueError, match=r"Fisher \(2012\) T2 requires N >= 5 samples."):
+    with pytest.raises(
+        ValueError, match=r"Fisher \(2012\) T2 requires N >= 5 samples."
+    ):
         fisher_single_sample(short_data)
 
 
@@ -179,7 +181,6 @@ def test_xu_2023_identity(identity_data, non_identity_data):
         xu_2023_identity(short_data)
 
 
-
 def test_identity_T2_outputs(identity_data, non_identity_data):
     res = identity_T2_test(identity_data)
     assert set(res.keys()) == {"stat", "p_value"}
@@ -198,14 +199,28 @@ def test_ahmad_2015_identity_alias():
     assert ahmad_2015_identity is identity_T2_test
 
 
-def test_identity_covariance_test_public_interface(identity_data, non_identity_data):
+def test_identity_covariance_test_public_interface(
+    identity_data, non_identity_data
+):
     # Standard single sample check
     res = identity_covariance_test(identity_data, method="chen_2010")
     assert set(res.keys()) == {"stat", "p_value"}
     assert 0 <= res["p_value"] <= 1
 
     # Verify that different methods work
-    for method in ["chen_2010", "ahmad2015", "xu_2023", "srivastava_2005", "srivastava_2011", "srivastava_2014", "ledoit_wolf", "nagao", "tyler", "fisher", "lrt"]:
+    for method in [
+        "chen_2010",
+        "ahmad2015",
+        "xu_2023",
+        "srivastava_2005",
+        "srivastava_2011",
+        "srivastava_2014",
+        "ledoit_wolf",
+        "nagao",
+        "tyler",
+        "fisher",
+        "lrt",
+    ]:
         res_m = identity_covariance_test(identity_data, method=method)
         assert set(res_m.keys()) == {"stat", "p_value"}
         assert 0 <= res_m["p_value"] <= 1
@@ -233,7 +248,7 @@ def test_covariance_under_null_behavior():
 
     # 3. returns Sigma^{-1/2} S Sigma^{-1/2} for diagonal Sigma
     Sigma = np.array([[4.0, 0.0], [0.0, 9.0]])
-    inv_sqrt = np.array([[0.5, 0.0], [0.0, 1.0/3.0]])
+    inv_sqrt = np.array([[0.5, 0.0], [0.0, 1.0 / 3.0]])
     expected = inv_sqrt @ S @ inv_sqrt
     expected = 0.5 * (expected + expected.T)
     assert np.allclose(_covariance_under_null(S, Sigma), expected)
@@ -262,7 +277,9 @@ def test_srivastava_2011_pvalues_and_smoke(identity_data):
     pvals = []
     for _ in range(200):
         X = rng.normal(size=(40, 100))
-        pvals.append(srivastava2011_single_sample(X, Sigma=np.eye(100))["p_value"])
+        pvals.append(
+            srivastava2011_single_sample(X, Sigma=np.eye(100))["p_value"]
+        )
 
     pvals = np.array(pvals)
     assert np.mean(pvals < 0.05) < 0.15
@@ -271,6 +288,7 @@ def test_srivastava_2011_pvalues_and_smoke(identity_data):
 
 def test_identity_T2_null_calibration():
     import numpy as np
+
     np.random.seed(42)
     n, p, n_sims = 50, 200, 5000
     rejections = 0
@@ -281,7 +299,9 @@ def test_identity_T2_null_calibration():
             rejections += 1
     rate = rejections / n_sims
     # With 5000 sims, 95% CI for true 0.05 rate is roughly [0.04, 0.06]
-    assert 0.03 <= rate <= 0.08, f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
+    assert (
+        0.03 <= rate <= 0.08
+    ), f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
 
 
 def test_chen_xu_gram_formulas():
@@ -290,21 +310,22 @@ def test_chen_xu_gram_formulas():
         T1_chen,
         T2_chen,
         T3_xu,
-        delta_hat_xu
+        delta_hat_xu,
     )
+
     rng = np.random.default_rng(12345)
     n = 8
     p = 4
     # Generate random non-centered data
     X = rng.normal(loc=1.5, scale=2.0, size=(n, p))
-    
+
     # Compute using the package (which centers X internally)
     blocks = gram_blocks(X)
     T1_pkg = T1_chen(blocks)
     T2_pkg = T2_chen(blocks)
     T3_pkg = T3_xu(blocks)
     delta_pkg = delta_hat_xu(blocks)
-    
+
     # Independent general-form implementation on centered X
     Xc = X - X.mean(axis=0)
     G = Xc @ Xc.T
@@ -312,41 +333,47 @@ def test_chen_xu_gram_formulas():
     D = d.sum()
     D2 = (d**2).sum()
     Q2 = (G**2).sum()
-    
+
     R = G.sum(axis=1) - d
     s_off = R.sum()
     sumsq_off = (G**2).sum() - (d**2).sum()
     sum_R2 = (R**2).sum()
-    
+
     P2 = n * (n - 1)
     P3 = n * (n - 1) * (n - 2)
     P4 = n * (n - 1) * (n - 2) * (n - 3)
-    
+
     # Y5 general form
     Y5_general = (s_off**2 - 4 * sum_R2 + 2 * sumsq_off) / P4
-    
+
     # Y5 centered closed form
     Y5_centered = (D**2 + 2 * Q2 - 6 * D2) / P4
-    
+
     # 1. Assert centered closed form matches general form to numerical tolerance
     assert np.isclose(Y5_centered, Y5_general)
-    
+
     # 2. General-form calculations for T1, T2, T3, delta
     T1_general = D / (n - 1)
-    
+
     Y2_general = sumsq_off / P2
     Y4_general = (sum_R2 - sumsq_off) / P3
     T2_general = Y2_general - 2 * Y4_general + Y5_general
-    
+
     Y_tilde_2_general = (D**2 - D2) / P2
     Y_tilde_4_general = (D * s_off - 2 * (d * R).sum()) / P3
     T3_general = Y_tilde_2_general - 2 * Y_tilde_4_general + Y5_general
-    
+
     Y6_general = D2 / n
     Y7_general = (d * R).sum() / P2
     Y8_general = Y_tilde_4_general
-    delta_general = Y6_general - 4 * Y7_general + 2 * Y8_general + 4 * Y4_general - 3 * Y5_general
-    
+    delta_general = (
+        Y6_general
+        - 4 * Y7_general
+        + 2 * Y8_general
+        + 4 * Y4_general
+        - 3 * Y5_general
+    )
+
     # Assert that pkg implementations match these general-form values
     assert np.isclose(T1_pkg, T1_general)
     assert np.isclose(T2_pkg, T2_general)
@@ -370,6 +397,7 @@ def test_srivastava_2005_identity_scale_alternative():
     S = np.cov(X, rowvar=False)
     # The sphericity statistic should be close to 0 because it's spherical
     from covtest.methods._srivastava_2005 import T_1_stat
+
     t1 = T_1_stat(S, N - 1)
     assert abs(t1) < 0.1
 
@@ -377,6 +405,3 @@ def test_srivastava_2005_identity_scale_alternative():
     X_short = rng.normal(size=(2, p))
     with pytest.raises(ValueError, match="requires N >= 3"):
         srivastava_2005_identity(X_short)
-
-
-

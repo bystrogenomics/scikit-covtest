@@ -48,6 +48,5 @@ def _a2_hat_tsukuda(X: np.ndarray) -> float:
     trS2 = np.sum(S * S)
 
     return ((N - 1) ** 2 / (p * (N - 2) * (N + 1))) * (
-        trS2 - (trS ** 2) / (N - 1)
+        trS2 - (trS**2) / (N - 1)
     )
-
