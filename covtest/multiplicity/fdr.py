@@ -1,4 +1,3 @@
-
 """
 False Discovery Rate (FDR) control procedures.
 

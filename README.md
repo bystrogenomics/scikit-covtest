@@ -2,6 +2,9 @@
 
 # scikit-covtest
 
+[![CI Status](https://github.com/bystrogenomics/scikit-covtest/actions/workflows/skcovtest.yml/badge.svg)](https://github.com/bystrogenomics/scikit-covtest/actions/workflows/skcovtest.yml)
+[![codecov](https://codecov.io/gh/bystrogenomics/scikit-covtest/graph/badge.svg)](https://codecov.io/gh/bystrogenomics/scikit-covtest)
+
 **Covariance matrix hypothesis testing in Python.**
 
 `scikit-covtest` is a Python toolkit for classical and high-dimensional hypothesis testing of covariance matrices. It implements tests for identity, sphericity, proportionality, and equality of covariance matrices using a consistent, lightweight API.

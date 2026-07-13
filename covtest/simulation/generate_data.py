@@ -53,6 +53,7 @@ $$ X = Z L^T, $$
 where $Z$ are standardized heavy-tailed draws and $L$ is the Cholesky factor
 of the covariance matrix.
 """
+
 from typing import Any, Dict, Optional
 
 import numpy as np
