@@ -78,4 +78,3 @@ API reference
    api/covtest.plotting
    api/covtest.simulation
    api/covtest.testing
-

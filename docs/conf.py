@@ -19,6 +19,7 @@ author = "Austin Talbot"
 # Try to get the version from the package if available
 try:
     import covtest
+
     release = covtest.__version__
 except Exception:
     release = "0.0.0"
@@ -62,4 +63,3 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -------------------------------------------------------------------
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-

@@ -48,7 +48,7 @@ Data Generators & Alternative Hypotheses
 To evaluate covariance testing procedures under realistic conditions, the :mod:`covtest.simulation.generate_data` module allows generating multivariate datasets with a target covariance matrix. Crucially, the marginal distributions can be configured to represent heavy-tailed or non-Gaussian laws:
 
 - **Heavy-Tailed Data Generation** (``generate_heavy_tailed_samples``): Generates samples matching the target covariance matrix via Cholesky decomposition. Supported distributions (``dist_type``) include:
-  
+
   * ``'normal'``: Standard multivariate normal.
   * ``'t'``: Student's t-distribution (requires a degrees of freedom parameter ``df``).
   * ``'laplace'``: Laplace distribution (double exponential).
@@ -59,7 +59,7 @@ To evaluate covariance testing procedures under realistic conditions, the :mod:`
   * ``'gh'``: Generalized hyperbolic approximation.
 
 - **Simulation Under Alternatives** (``generate_heavy_tailed_alternative``): Simulates datasets under specific alternative covariance models on top of a baseline heavy-tailed noise. Supported alternatives (passed in the ``options`` dictionary under ``'alt'``) include:
-  
+
   * ``'mixture'``: A two-component mixture model (adds $\pm \mu$ to the samples).
   * ``'scaled_cov'``: Multiplies the covariance matrix by a scale factor.
   * ``'rank1_bump'``: Adds a rank-1 perturbation ($\Sigma + v v^T$).
