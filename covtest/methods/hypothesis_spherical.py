@@ -1,9 +1,8 @@
 import numpy as np
 import scipy.stats as stats  # type: ignore
 
-from . import _hallin2006 as hallin2006
 from . import _srivastava_2005 as s2005
-from . import _ahmad2015 as ahmad2015
+from . import _ahmad as ahmad2015
 from .utils import (
     covariance_traces,
     result_dict,
@@ -239,79 +238,6 @@ def srivastava_2005_sphericity(X):
     return result_dict(z_stat, p_value)
 
 
-def _spatial_sign_rows(A):
-    # A: (m, p) -> row-wise spatial signs
-    norms = np.linalg.norm(A, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
-    return A / norms
-
-
-def _U_tensor(X):
-    """
-    U[i, j, :] = spatial sign of (X[i] - X[j]).
-    Shape: (n, n, p). Diagonal rows are zero.
-    """
-    X = np.asarray(X)
-    n, p = X.shape
-    U = np.empty((n, n, p), dtype=float)
-    for i in range(n):
-        U[i] = _spatial_sign_rows(X[i] - X)  # (n, p)
-        U[i, i] = 0.0
-    return U
-
-
-def sk_test(X):
-    """High-dimensional Kendall's tau-type sphericity test (SK).
-
-    Implements the leave-one-out U-statistic estimator from Feng & Liu (2017).
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples, n_features)
-        The input data matrix.
-
-    Returns
-    -------
-    result : dict
-        A dictionary containing:
-        - 'stat' : float
-            The computed test statistic Q.
-        - 'p_value' : float
-            The computed p-value.
-    """
-    X = validate_data_matrix(X)
-    n, p = X.shape
-    if n < 4:
-        raise ValueError("Need n >= 4 for the leave-one-out estimator.")
-
-    U = _U_tensor(X)  # (n, n, p)
-
-    # Build S_i = sum_{j != i} U[i, j] U[i, j]^T  (p x p for each i)
-    # and W = sum_i S_i
-    S_list = []
-    W = np.zeros((p, p), dtype=float)
-    for i in range(n):
-        A_i = U[i]  # (n, p), with A_i[i]=0
-        S_i = A_i.T @ A_i  # p x p   (sums over j)
-        S_list.append(S_i)
-        W += S_i
-
-    sum_tr_Si2 = sum(np.sum(S_i * S_i) for S_i in S_list)
-    tr_W2 = float(np.sum(W * W))
-
-    sk_sum_distinct = tr_W2 - 4.0 * sum_tr_Si2 + 2.0 * n * (n - 1)
-
-    denom = n * (n - 1) * (n - 2) * (n - 3)
-    tr_hat = sk_sum_distinct / denom
-
-    Q = p * tr_hat - 1.0
-    sigma2 = 4.0 * (p - 1) / (n * (n - 1) * (p + 2))  # paper's null variance
-    z = Q / np.sqrt(sigma2)
-    pval = 1.0 - stats.norm.cdf(z)  # right-tail, as in the paper
-
-    return result_dict(Q, pval)
-
-
 def muirhead_sphericity_lrt(
     X=None,
     S=None,
@@ -452,53 +378,6 @@ def czz_sphericity_test(X, center=False):
     p_norm = float(1.0 - stats.norm.cdf(Z))  # right-tailed
 
     return result_dict(float(Z), p_norm)
-
-
-def hallin_rank_sphericity_test(X, method="wilcoxon"):
-    """Van der Waerden or Wilcoxon rank-based test for sphericity.
-
-    Tests the null hypothesis of sphericity using spatial ranks.
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples, n_features)
-        The input data matrix.
-    method : {"wilcoxon", "vdw"}, default="wilcoxon"
-        Rank-based score function to use.
-
-    Returns
-    -------
-    result : dict
-        A dictionary containing:
-        - 'stat' : float
-            The computed test statistic Q.
-        - 'p_value' : float
-            The computed p-value.
-    """
-    X = validate_data_matrix(X)
-    if method not in {"wilcoxon", "vdw"}:
-        raise ValueError("Unrecognized method %s" % method)
-
-    n, k = X.shape
-    U, d = hallin2006._center_and_scale(X)
-    ranks = stats.rankdata(d, method="average")
-    u = ranks / (n + 1)
-
-    if method == "wilcoxon":
-        scores = u - 0.5
-        score_var = 1 / 12
-    else:
-        u = np.clip(u, 1e-6, 1 - 1e-6)
-
-        raw_scores = stats.chi.ppf(u, df=k)
-        scores = raw_scores - np.mean(raw_scores)
-        score_var = np.var(raw_scores, ddof=0)
-
-    Q = hallin2006._compute_statistic(U, scores, k, score_var)
-    df = k * (k + 1) // 2 - 1
-    pval = 1 - stats.chi2.cdf(Q, df)
-
-    return result_dict(Q, pval)
 
 
 def _gram_aggregates(X):

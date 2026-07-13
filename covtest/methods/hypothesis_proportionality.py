@@ -5,80 +5,15 @@ import numpy.linalg as la
 import scipy.stats as stats
 from numpy.linalg import inv, slogdet
 from scipy.integrate import quad
-from scipy.stats import chi2
 
 from . import _cheng_2019 as cheng2019
 from . import _eriksen_1987 as eriksen1987
-from . import _flurry_1986 as flurry1986
 from . import _liu_2014 as liu2014
 from . import _tsukuda_2019 as tsukuda2019
-from . import _ahmad2022 as ahmad2022
+from . import _ahmad as ahmad2022
 from .utils import validate_data_matrix, validate_matching_data_matrices
 
 ArrayLike = np.ndarray
-
-##########
-# Flurry #
-##########
-
-
-def flury_proportionality_test(
-    X,
-    Y,
-    max_iter: int = 1000,
-    tol: float = 1e-9,
-    ridge: float = 0.0,
-    init_c: Optional[np.ndarray] = None,
-):
-    """Flury's test for proportional covariance matrices.
-
-    Tests H0: Sigma_1 = c_1 * Sigma, Sigma_2 = c_2 * Sigma for
-    some common Sigma and constants c_1, c_2 > 0.
-
-    Parameters
-    ----------
-    X : array-like of shape (n_samples_1, n_features)
-        First sample data matrix.
-    Y : array-like of shape (n_samples_2, n_features)
-        Second sample data matrix.
-    max_iter : int, default=1000
-        Maximum iterations for MLE convergence.
-    tol : float, default=1e-9
-        Convergence tolerance.
-    ridge : float, default=0.0
-        Ridge regularization parameter.
-    init_c : array-like, optional
-        Initial values for proportionality constants.
-
-    Returns
-    -------
-    result : dict
-        Test results including statistic and p-value.
-
-    References
-    ----------
-    .. [1] Flury, B. K. (1986). "Proportionality of k covariance
-           matrices." Statistics & Probability Letters, 4(1), 29-33.
-    """
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-    X_list = [X, Y]
-    S_list = []
-    n_list = []
-    for X in X_list:
-        X = np.asarray(X, float)
-        n_i, p_i = X.shape
-        if not S_list:
-            p = p_i
-        elif p_i != p:
-            raise ValueError(
-                "All groups must have the same number of variables p."
-            )
-        S_list.append(flurry1986._cov_mle(X))
-        n_list.append(n_i)
-    return flurry1986.flury_proportionality_test_from_cov(
-        S_list, n_list, max_iter=max_iter, tol=tol, ridge=ridge, init_c=init_c
-    )
 
 
 ################
@@ -86,7 +21,7 @@ def flury_proportionality_test(
 ################
 
 
-def bartlett_adjusted_proportionality_test(
+def bootstrap_bartlett_adjusted_proportionality_test(
     X,
     Y,
     ridge=0.0,
@@ -97,116 +32,53 @@ def bartlett_adjusted_proportionality_test(
     random_state=None,
 ):
     """
-    Bartlett-adjusted Wilks LRT for proportional covariance matrices.
+    Bootstrap Bartlett-adjusted Wilks LRT for proportional covariance matrices.
 
-    Strategy
-    --------
-    1) Fit H0 by MLE (hat(Sigma), hat{c}) using the proportional model Sigma_k = c_k Sigma.
-    2) Compute the unadjusted Wilks statistic T = -2 log Λ from the data.
-    3) Parametric Bartlett factor:
-         simulate B datasets under H0 with the fitted hat(Sigma)_k =
-         hat{c}_k hat(Sigma) and the same n_k;
-         compute T_b for each; set phi = df / mean(T_b).
-       The adjusted statistic is T_adj = phi * T, yielding E[T_adj]
-       approx df.
+    This function performs a parametric-bootstrap Bartlett-style calibration of the
+    likelihood ratio test statistic. Note that this is NOT Eriksen's closed-form analytic
+    Bartlett adjustment (Theorem 6.1 of Eriksen 1987).
 
     Parameters
     ----------
-        X_groups : list of arrays, optional
-        Observations per group (N_k x p). If given, S_list and n_list are
-        built with ddof=1.
+    X : array-like of shape (n_samples_1, n_features)
+        First sample data matrix.
+    Y : array-like of shape (n_samples_2, n_features)
+        Second sample data matrix.
     ridge : float, default 0.0
         Small diagonal ridge to improve numerical stability when needed.
     tol, max_iter : solver settings for the H0 MLE.
     B : int, default 400
-        Number of parametric bootstrap replicates to estimate the
-        Bartlett factor.
+        Number of parametric bootstrap replicates to estimate the Bartlett factor.
     refit_mle_each_boot : bool, default True
-        If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap
-        replicate before computing T_b.
-        This is more accurate; set False for speed (uses the original
-        hat(Sigma), hat{c} in T_b).
+        If True, re-fit (hat(Sigma), hat{c}) inside each bootstrap replicate.
+        Highly recommended. If False, the null model is not re-maximized, which
+        means it is not a true LRT bootstrap calibration.
     random_state : int or np.random.Generator, optional
         RNG seed or Generator.
-
-    Returns
-    -------
-    result : dict
-        Keys include:
-        - 'stat'        : unadjusted Wilks statistic
-        - 'df'          : chi-square degrees of freedom
-        - 'pvalue'      : unadjusted p-value (χ²_df)
-        - 'phi'         : multiplicative Bartlett factor (approx df /
-                             E[T] under H0)
-        - 'stat_adj'    : Bartlett-adjusted statistic  (phi * stat)
-        - 'pvalue_adj'  : Bartlett-adjusted p-value    (χ²_df right-tail)
-        - 'Sigma_hat', 'c_hat', 'converged', 'iterations', 'n_list', 'S_list'
     """
     X = validate_data_matrix(X)
     Y = validate_data_matrix(Y)
-    X_groups = [X, Y]
-    rng = np.random.default_rng(random_state)
-
-    # 1) Unadjusted fit and statistic
-    base = eriksen1987.test_cov_proportionality(
-        X_groups=X_groups,
-        S_list=None,
-        n_list=None,
+    return eriksen1987.bootstrap_bartlett_adjusted_proportionality_test(
+        X_groups=[X, Y],
         ridge=ridge,
         tol=tol,
         max_iter=max_iter,
+        B=B,
+        refit_mle_each_boot=refit_mle_each_boot,
+        random_state=random_state,
     )
-    Sigma_hat = base["Sigma_hat"]
-    c_hat = base["c_hat"]
-    S_list = base["S_list"]
-    n_list = np.asarray(base["n_list"], dtype=float)
-    K = len(S_list)
-    p = S_list[0].shape[0]
-    df = base["df"]
-    T_obs = base["stat"]
 
-    # 2) Build Cholesky factors for simulation under H0
-    chol_list = []
-    for k in range(K):
-        Sk = c_hat[k] * Sigma_hat
-        Sk = eriksen1987._ensure_pd(Sk, ridge if ridge > 0 else 1e-12)
-        chol_list.append(la.cholesky(Sk))
 
-    # 3) Parametric bootstrap to estimate E[T] under H0 and phi
-    T_boot = np.empty(B, dtype=float)
-    for b in range(B):
-        S_b = []
-        for k in range(K):
-            n_k = int(n_list[k])
-            # Simulate n_k + 1 observations so that ddof=1 yields n_k in Wishart
-            Xk = rng.standard_normal((n_k + 1, p)) @ chol_list[k].T
-            S_b.append(eriksen1987._sample_cov(Xk))
-        if refit_mle_each_boot:
-            Sigma_b, c_b, _, _ = eriksen1987.fit_proportional_covariances(
-                S_b, n_list, tol=tol, max_iter=max_iter, ridge=ridge
-            )
-            T_b = eriksen1987._wilks_stat_from_S(
-                S_b, n_list, Sigma_b, c_b, ridge=ridge
-            )
-        else:
-            T_b = eriksen1987._wilks_stat_from_S(
-                S_b, n_list, Sigma_hat, c_hat, ridge=ridge
-            )
-        T_boot[b] = T_b
+def bartlett_adjusted_proportionality_test(*args, **kwargs):
+    import warnings
 
-    mean_T = float(np.mean(T_boot))
-    # Multiplicative Bartlett factor so that E[phi*T] ≈ df
-    phi = df / mean_T if mean_T > 0 else 1.0
-
-    T_adj = phi * T_obs
-    p_adj = 1.0 - chi2.cdf(T_adj, df)
-
-    return {
-        **base,
-        "phi": float(phi),
-        "stat": float(T_adj),
-        "p_value": float(p_adj),
-    }
+    warnings.warn(
+        "bartlett_adjusted_proportionality_test is deprecated; "
+        "use bootstrap_bartlett_adjusted_proportionality_test instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return bootstrap_bartlett_adjusted_proportionality_test(*args, **kwargs)
 
 
 def proportionality_test_LZ(X, Y, regularize=0.0):

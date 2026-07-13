@@ -29,7 +29,7 @@ Chen 2010 estimators (for identity test Vn):
   T1 = D / (n-1)                     unbiased estimator of tr(Σ)  [= tr(S)]
   Y2 = (Q2 - D2) / [n(n-1)]
   Y4 = (-Q2 + 2·D2) / [n(n-1)(n-2)]
-  Y5 = (D² + 2·Q2 - 10·D2) / [n(n-1)(n-2)(n-3)]
+  Y5 = (D² + 2·Q2 - 6·D2) / [n(n-1)(n-2)(n-3)]
   T2 = Y2 - 2·Y4 + Y5               unbiased estimator of tr(Σ²)   (needs n≥4)
 
 Xu 2023 extra estimators (for adjusted test V̂):
@@ -101,14 +101,14 @@ def T2_chen(blocks):
     where (for centred data, so R = 0 and r = 0):
       Y₂ = (Q₂ − D₂) / [n(n-1)]
       Y₄ = (−Q₂ + 2D₂) / [n(n-1)(n-2)]
-      Y₅ = (D² + 2Q₂ − 10D₂) / [n(n-1)(n-2)(n-3)]
+      Y₅ = (D² + 2Q₂ − 6D₂) / [n(n-1)(n-2)(n-3)]
     """
     n, D, D2, Q2 = blocks["n"], blocks["D"], blocks["D2"], blocks["Q2"]
     if n < 4:
         raise ValueError(f"Chen 2010 T₂ requires n ≥ 4 (got n={n}).")
     Y2 = (Q2 - D2) / (n * (n - 1))
     Y4 = (-Q2 + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D**2 + 2 * Q2 - 10 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y2 - 2 * Y4 + Y5
 
 
@@ -124,7 +124,7 @@ def T3_xu(blocks):
     where (for centred data):
       Ỹ₂ = (D² − D₂) / [n(n-1)]
       Ỹ₄ = (−D² + 2D₂) / [n(n-1)(n-2)]
-      Y₅  = (D² + 2Q₂ − 10D₂) / [n(n-1)(n-2)(n-3)]
+      Y₅  = (D² + 2Q₂ − 6D₂) / [n(n-1)(n-2)(n-3)]
 
     Requires n ≥ 4.
     """
@@ -133,7 +133,7 @@ def T3_xu(blocks):
         raise ValueError(f"Xu 2023 T₃ requires n ≥ 4 (got n={n}).")
     Y_tilde_2 = (D**2 - D2) / (n * (n - 1))
     Y_tilde_4 = (-(D**2) + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D**2 + 2 * Q2 - 10 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y_tilde_2 - 2 * Y_tilde_4 + Y5
 
 
@@ -150,7 +150,7 @@ def delta_hat_xu(blocks):
       Y₇ = −D₂ / [n(n-1)]
       Y₈ = Ỹ₄ = (−D² + 2D₂) / [n(n-1)(n-2)]
       Y₄ = (−Q₂ + 2D₂) / [n(n-1)(n-2)]
-      Y₅ = (D² + 2Q₂ − 10D₂) / [n(n-1)(n-2)(n-3)]
+      Y₅ = (D² + 2Q₂ − 6D₂) / [n(n-1)(n-2)(n-3)]
 
     Requires n ≥ 5.
     """
@@ -161,7 +161,7 @@ def delta_hat_xu(blocks):
     Y7 = -D2 / (n * (n - 1))
     Y_tilde_4 = (-(D**2) + 2 * D2) / (n * (n - 1) * (n - 2))  # Y8 = Ỹ₄
     Y4 = (-Q2 + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D**2 + 2 * Q2 - 10 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y6 - 4 * Y7 + 2 * Y_tilde_4 + 4 * Y4 - 3 * Y5
 
 

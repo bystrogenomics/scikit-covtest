@@ -30,14 +30,6 @@ High-dimensional, U-statistic / non-normal:
 LRT-based:
   one_sample_cov_test           Likelihood Ratio Test
 
-2. Multi-Sample / Common-Covariance Tests (Internal / Advanced)
-----------------------------------------------------------------
-These tests are not omnibus tests of equality of covariance matrices. They generally
-assume covariance homogeneity and evaluate secondary hypotheses:
-
-  ahmad_2017_identity           Assumes Sigma_1 = ... = Sigma_g = Sigma,
-                                and tests whether the common Sigma = I_p.
-
 References
 ----------
 Nagao, H. (1973). Annals of Statistics 1(4), 700-709.
@@ -53,7 +45,6 @@ Chen, S. X., Zhang, L.-X. & Zhong, P.-S. (2010).
     J. American Statistical Association 105(490), 810-819.
 Srivastava, M. S., Yanagihara, H. & Kubokawa, T. (2014).
     J. Multivariate Analysis 130, 289-309.
-Ahmad, M. R. (2017). Scandinavian J. Statistics 44, 500-523.
 Xu, G. et al. (2023 / 2025). Scandinavian J. Statistics 52, 249-269.
 """
 
@@ -63,9 +54,8 @@ import scipy.stats as stats
 from numpy.linalg import slogdet
 from scipy.stats import norm
 
-from . import _srivastava_2005 as s2005
 from . import _tylers as tyler
-from . import _ahmad2015 as ahmad2015
+from . import _ahmad as ahmad2015
 from . import _srivastava_yanagihara as sya
 from . import _chen_xu_gram as cxg
 from .utils import (
@@ -208,7 +198,7 @@ def test_identity_T2(
     # We subtract this finite-sample correction so that (n/2)*T2_corrected
     # is mean-zero under the null for any p/n ratio.
     if center:
-        T2 = T2 - p / (n ** 2)
+        T2 = T2 - p / (n**2)
 
     z, used_cal = ahmad2015._standardize_T(
         T2, n=n, p=p, calibration=calibration
@@ -318,12 +308,14 @@ def srivastava_2005_identity(X):
     Srivastava, M. S. (2005). J. Japan Statist. Soc. 35(2), 251-272.
     """
     X = validate_data_matrix(X)
-    n = X.shape[0]
-    S = sample_covariance(X)
-    T_1 = s2005.T_1_stat(S, n)
-    z_stat = (n / 2) * T_1
-    p_value = 1 - stats.norm.cdf(z_stat)
-    return result_dict(z_stat, p_value)
+    N, p = X.shape
+    if N < 3:
+        raise ValueError("Srivastava (2005) identity test requires N >= 3.")
+
+    S = sample_covariance(X)  # centered covariance with divisor N - 1
+    statistic = _srivastava2011_(N - 1, p, S)
+    p_value = float(norm.sf(statistic))
+    return result_dict(statistic, p_value)
 
 
 def tyler_identity(X, unknown_mean=False, method="tr"):
@@ -411,13 +403,17 @@ def fisher_single_sample(X, Sigma="identity"):
     Fisher, T. J. (2012). J. Statistical Planning & Inference 142, 312-326.
     """
     X = validate_data_matrix(X)
-    p = X.shape[1]
-    n = X.shape[0]
+    N, p = X.shape
+    n_eff = N - 1
+
+    if n_eff <= 3:
+        raise ValueError("Fisher (2012) T2 requires N >= 5 samples.")
+
     S = sample_covariance(X)
     S_ = _covariance_under_null(S, Sigma)
 
-    statistic = _fisher_2012_stat_(n - 1, p, S_)
-    p_value = 2 * (1 - norm.cdf(abs(statistic)))
+    statistic = _fisher_2012_stat_(n_eff, p, S_)
+    p_value = float(norm.sf(statistic))
 
     return result_dict(statistic, p_value)
 
@@ -425,12 +421,12 @@ def fisher_single_sample(X, Sigma="identity"):
 def srivastava2011_single_sample(X, Sigma="identity"):
     """Srivastava (2011) test for covariance matrix structure.
 
-    Tests the null hypothesis H0: Sigma = Sigma0, where Sigma0 defaults to 
-    the identity matrix (Sigma0 = I_p). Note that Sigma="identity" and 
+    Tests the null hypothesis H0: Sigma = Sigma0, where Sigma0 defaults to
+    the identity matrix (Sigma0 = I_p). Note that Sigma="identity" and
     Sigma=np.eye(p) are equivalent.
 
     Rejection is based on large positive values of the test statistic. Thus,
-    this function returns an upper-tail p-value. It expects a single sample 
+    this function returns an upper-tail p-value. It expects a single sample
     data matrix X, not multiple groups.
 
     Parameters
@@ -682,101 +678,6 @@ def xu_2023_identity(X):
     return result_dict(stat, p_value)
 
 
-def ahmad_2017_identity(Xs):
-    """
-    Ahmad (2017) multi-sample test for a common identity covariance matrix.
-
-    .. warning::
-       [INTERNAL / ADVANCED] This method is not an omnibus test of H0: Sigma_i = I
-       under heterogeneous alternatives. It requires g >= 2 and assumes a common 
-       covariance matrix across groups (covariance homogeneity), testing whether 
-       this common covariance is identity.
-
-    The test statistic is (equations 5 and 22–23 of the paper):
-
-        T_b = C₃/p − 2·C₁/p + 1
-
-    where
-        C₁ = Q-weighted average of Bᵢ = tr(Sᵢ)  (estimator of tr(Σ))
-        C₂ = 1/[g(g−1)] Σᵢ≠ⱼ BᵢBⱼ             (estimator of [tr(Σ)]²)
-        C₃ = Σᵢ≠ⱼ P(nᵢ,nⱼ)·Bᵢⱼ / P*           (estimator of tr(Σ²))
-
-    and Bᵢ = tr(Sᵢ) (trace of sample covariance of population i),
-    Bᵢⱼ = tr(SᵢSⱼ) (cross-trace of sample covariances).
-
-    Under H₀ (Theorem 5 of the paper):  Values standardise to a standard normal:
-    stat = sqrt(P*/4) * T_b -> N(0, 1)
-
-    where P* = Σᵢ≠ⱼ Q(nᵢ)·Q(nⱼ) and Q(nᵢ) = nᵢ(nᵢ-1).
-
-    The two-sample (g=2) and multi-sample (g≥2) cases are handled by the
-    same formula; for g=2 this reduces to equations (13)–(15) of the paper.
-
-    Parameters
-    ----------
-    Xs : list of array-like, each of shape (nᵢ, p)
-        Data matrices from g ≥ 2 populations. All must have the same p.
-
-    Returns
-    -------
-    result : dict  with keys 'stat' (standardised T_b) and 'p_value' (upper-tail).
-
-    References
-    ----------
-    Ahmad, M. R. (2017).
-    "Location-invariant Multi-sample U-tests for Covariance Matrices
-    with Large Dimension."
-    Scandinavian Journal of Statistics, 44, 500-523.
-    https://doi.org/10.1111/sjos.12262
-    """
-    if len(Xs) < 2:
-        raise ValueError(
-            "ahmad_2017_identity requires at least 2 samples (g ≥ 2)."
-        )
-
-    g = len(Xs)
-    arrays = [validate_data_matrix(np.asarray(X, dtype=np.float64)) for X in Xs]
-    p = arrays[0].shape[1]
-    if not all(A.shape[1] == p for A in arrays):
-        raise ValueError("All samples must have the same number of features p.")
-
-    # ── per-sample quantities ─────────────────────────────────────────────
-    ns = [A.shape[0] for A in arrays]  # sample sizes nᵢ
-    Qs = [ni * (ni - 1) for ni in ns]  # Q(nᵢ) = nᵢ(nᵢ-1)
-
-    # Sample covariances (p×p)
-    Ss = []
-    for A in arrays:
-        Ac = A - A.mean(axis=0)
-        Ss.append(Ac.T @ Ac / (A.shape[0] - 1))
-
-    # Bᵢ = tr(Sᵢ)  (unbiased estimator of tr(Σᵢ))
-    Bs = [float(np.trace(Si)) for Si in Ss]
-
-    # ── pooled estimators ─────────────────────────────────────────────────
-    sum_Q = sum(Qs)
-    C1 = sum(Qs[i] * Bs[i] for i in range(g)) / sum_Q
-
-    P_star_Q = 0.0
-    C3_num = 0.0
-    for i in range(g):
-        for j in range(g):
-            if i != j:
-                Pij = float(Qs[i] * Qs[j])  # P(nᵢ,nⱼ) = Q(nᵢ)·Q(nⱼ)
-                Bij = float(np.trace(Ss[i] @ Ss[j]))
-                P_star_Q += Pij
-                C3_num += Pij * Bij
-    C3 = C3_num / P_star_Q
-
-    T_b = C3 / p - 2.0 * C1 / p + 1.0
-    P_n = float(
-        sum(ns[i] * ns[j] for i in range(g) for j in range(g) if i != j)
-    )
-    stat = float(np.sqrt(P_n / 4.0) * T_b)
-    p_value = float(norm.sf(stat))
-    return result_dict(stat, p_value)
-
-
 def identity_covariance_test(X, method="chen_2010", **kwargs):
     """Clean public wrapper for single-sample identity covariance test.
 
@@ -851,4 +752,3 @@ def identity_covariance_test(X, method="chen_2010", **kwargs):
         "stat": float(stat),
         "p_value": float(p_value),
     }
-
