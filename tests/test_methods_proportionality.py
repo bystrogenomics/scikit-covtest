@@ -130,9 +130,7 @@ def test_ahmad_2022_helpers():
         ahmad2022.estimate_Ei_trSigma2(np.ones((3, 10)))
 
     with pytest.raises(ValueError, match="same number of features"):
-        ahmad2022.estimate_E12_trSigma1Sigma2(
-            np.ones((10, 5)), np.ones((10, 6))
-        )
+        ahmad2022.estimate_E12_trSigma1Sigma2(np.ones((10, 5)), np.ones((10, 6)))
 
 
 def test_tsukuda_matsuura_regression_and_properties():
@@ -167,11 +165,11 @@ def test_tsukuda_matsuura_regression_and_properties():
     a_y2 = _a2_hat_tsukuda(Y)
 
     T = (m * n / (m + n)) * (
-        a_x2 / (a_x1**2) + a_y2 / (a_y1**2) - 2.0 * a_xy / (a_x1 * a_y1)
+        a_x2 / (a_x1 ** 2) + a_y2 / (a_y1 ** 2) - 2.0 * a_xy / (a_x1 * a_y1)
     )
-    b2_hat = ((m**2) / (m**2 + n**2)) * (a_x2 / (a_x1**2)) + (
-        (n**2) / (m**2 + n**2)
-    ) * (a_y2 / (a_y1**2))
+    b2_hat = ((m ** 2) / (m ** 2 + n ** 2)) * (a_x2 / (a_x1 ** 2)) + (
+        (n ** 2) / (m ** 2 + n ** 2)
+    ) * (a_y2 / (a_y1 ** 2))
 
     Z_correct = T / (2.0 * b2_hat)
     Z_incorrect_sqrt = T / (2.0 * np.sqrt(b2_hat))
@@ -310,9 +308,7 @@ def test_eriksen_proportionality_verifications():
 
     # Verify deprecated wrapper raises warning
     with pytest.deprecated_call():
-        res_dep = deprecated_bartlett(
-            X_groups=[X_null, Y_null], B=30, random_state=42
-        )
+        res_dep = deprecated_bartlett(X_groups=[X_null, Y_null], B=30, random_state=42)
     assert np.allclose(res_boot["stat"], res_dep["stat"])
 
     # 6. Invalid inputs validation checks
@@ -325,9 +321,7 @@ def test_eriksen_proportionality_verifications():
     # Singular sample covariance (N < p + 1 observations)
     X_sing = rng.standard_normal((3, 4))
     Y_sing = rng.standard_normal((10, 4))
-    with pytest.raises(
-        ValueError, match=r"must have at least p\+1 observations"
-    ):
+    with pytest.raises(ValueError, match=r"must have at least p\+1 observations"):
         test_cov_proportionality(X_groups=[X_sing, Y_sing])
 
     # Mismatched dimensions (columns)

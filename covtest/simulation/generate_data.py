@@ -227,9 +227,7 @@ def generate_heavy_tailed_alternative(
     # Split distribution options to avoid collisions with alt keys
     dist_opts = options.get("dist", None)
 
-    def _unit_vector_from_dir_or_random(
-        dir_vec: Optional[np.ndarray],
-    ) -> np.ndarray:
+    def _unit_vector_from_dir_or_random(dir_vec: Optional[np.ndarray],) -> np.ndarray:
         if dir_vec is None:
             v = rng.standard_normal(p)
         else:

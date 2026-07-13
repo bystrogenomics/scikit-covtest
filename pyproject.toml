@@ -39,3 +39,6 @@ include = ["covtest*"]
 [tool.setuptools.package-data]
 "covtest.datasets" = ["data/*.npz"]
 
+[tool.ruff]
+line-length = 88
+ignore = ["E501"]

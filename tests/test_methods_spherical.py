@@ -190,9 +190,7 @@ def test_standardize_T_values():
     assert np.isclose(z_auto, 5.0)
     assert cal_auto == "ahmad2015"
 
-    z_ahmad, cal_ahmad = _standardize_T(
-        T=0.01, n=1000, p=80, calibration="ahmad2015"
-    )
+    z_ahmad, cal_ahmad = _standardize_T(T=0.01, n=1000, p=80, calibration="ahmad2015")
     assert np.isclose(z_ahmad, 5.0)
     assert cal_ahmad == "ahmad2015"
 
@@ -203,9 +201,7 @@ def test_standardize_T_values():
     assert cal_large == "ahmad2015"
 
     # Verify ratio calibration is only when explicitly requested
-    z_ratio, cal_ratio = _standardize_T(
-        T=0.01, n=1000, p=80, calibration="ratio"
-    )
+    z_ratio, cal_ratio = _standardize_T(T=0.01, n=1000, p=80, calibration="ratio")
     # For ratio: c = p/n = 80/1000 = 0.08
     # var_nT = 4.0 * (1.0 + 2.0 / c) = 4 * (1 + 25) = 104
     # Expected: (n * T) / sqrt(var_nT) = 10 / sqrt(104) = 0.98058

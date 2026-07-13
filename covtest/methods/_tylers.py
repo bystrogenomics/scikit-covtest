@@ -28,9 +28,9 @@ def tylers_M(X, tol=1e-6, max_iter=500, assume_centered=True):
         invC = la.inv(C)
         denom = np.einsum("ij,jk,ik->i", Xc, invC, Xc)
         denom = np.maximum(denom, 1e-12)
-        C = (p / n) * (
-            Xc[:, :, None] * Xc[:, None, :] / denom[:, None, None]
-        ).sum(axis=0)
+        C = (p / n) * (Xc[:, :, None] * Xc[:, None, :] / denom[:, None, None]).sum(
+            axis=0
+        )
         C = C / np.trace(C) * p
         if la.norm(C - C_old, "fro") < tol:
             break
@@ -41,22 +41,22 @@ def _mu_sigma2(c1, c2):
     # Theorem 2.4: limiting mean and variance for p*T2_tr
     mu = (
         -3 * c1
-        + c1**2
+        + c1 ** 2
         - 3 * c2
         + 8 * c1 * c2
-        - 3 * (c1**2) * c2
-        + c2**2
-        - c1 * (c2**2)
+        - 3 * (c1 ** 2) * c2
+        + c2 ** 2
+        - c1 * (c2 ** 2)
     ) / ((c2 - 1) * (c1 - 1) ** 2)
 
     sigma2 = (
-        4 * (c1**2)
-        + 8 * (c1**3)
+        4 * (c1 ** 2)
+        + 8 * (c1 ** 3)
         + 8 * c1 * c2
-        - 8 * (c1**3) * c2
-        + 4 * (c2**2)
-        - 8 * c1 * (c2**2)
-        + 4 * (c1**2) * (c2**2)
+        - 8 * (c1 ** 3) * c2
+        + 4 * (c2 ** 2)
+        - 8 * c1 * (c2 ** 2)
+        + 4 * (c1 ** 2) * (c2 ** 2)
     ) / (
         (1 - c1) ** 4
     )  # same as (c1-1)**4

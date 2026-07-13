@@ -29,7 +29,7 @@ def _unbiased_tr_sigma2_per_p(X: np.ndarray) -> float:
     tr_V = np.sum(s)  # tr(V)
     n = N - 1
     denom = p * N * (N - 1) * (N - 2) * (N - 3)
-    a2_hat = ((N - 2) * n * tr_V2 - N * n * tr_D2 + tr_V**2) / denom
+    a2_hat = ((N - 2) * n * tr_V2 - N * n * tr_D2 + tr_V ** 2) / denom
     return a2_hat
 
 
@@ -47,6 +47,4 @@ def _a2_hat_tsukuda(X: np.ndarray) -> float:
     trS = np.trace(S)
     trS2 = np.sum(S * S)
 
-    return ((N - 1) ** 2 / (p * (N - 2) * (N + 1))) * (
-        trS2 - (trS**2) / (N - 1)
-    )
+    return ((N - 1) ** 2 / (p * (N - 2) * (N + 1))) * (trS2 - (trS ** 2) / (N - 1))

@@ -67,10 +67,7 @@ def plot_eigen_scree(
             lambda_plus = (1 + np.sqrt(q)) ** 2
             plt.axhline(y=lambda_plus, color="red", linestyle="--", linewidth=2)
             plt.text(
-                len(eigvals) * 0.7,
-                lambda_plus * 1.02,
-                "MP upper bound",
-                color="red",
+                len(eigvals) * 0.7, lambda_plus * 1.02, "MP upper bound", color="red",
             )
 
     # Style

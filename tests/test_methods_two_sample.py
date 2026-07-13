@@ -74,9 +74,7 @@ def test_srivastava_2007(data_three_groups):
     matrices = list(data_three_groups.values())
     stat = _srivastava_2007_stat(matrices)
     assert isinstance(stat, float)
-    res = srivastava_two_sample_2007(
-        data_three_groups["g1"], data_three_groups["g2"]
-    )
+    res = srivastava_two_sample_2007(data_three_groups["g1"], data_three_groups["g2"])
     assert set(res.keys()) == {"stat", "p_value"}
     assert 0 <= res["p_value"] <= 1
 

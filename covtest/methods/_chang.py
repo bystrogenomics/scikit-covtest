@@ -4,9 +4,7 @@ import numpy as np
 def _validate_matrix(X, name):
     X = np.asarray(X, dtype=float)
     if X.ndim != 2:
-        raise ValueError(
-            f"{name} must be 2D with shape (n_samples, n_features)."
-        )
+        raise ValueError(f"{name} must be 2D with shape (n_samples, n_features).")
     if not np.isfinite(X).all():
         raise ValueError(f"{name} contains NaN/Inf.")
     return X

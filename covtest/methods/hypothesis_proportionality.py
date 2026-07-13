@@ -130,7 +130,7 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
 
     trA = np.trace(A)
     trA2 = np.trace(A @ A)
-    Tn = (p**2) * (trA2 / (trA**2)) - p
+    Tn = (p ** 2) * (trA2 / (trA ** 2)) - p
 
     # Ratios and h
     y1 = p / n1
@@ -142,11 +142,11 @@ def proportionality_test_LZ(X, Y, regularize=0.0):
     beta_y = liu2014._beta_hat(Y)
 
     # Asymptotic mean and variance pieces
-    mu_Tn = (h**2 + y2**2) / (1 - y2) ** 2 + beta_x * y1 + beta_y * y2
-    v_Tn = 4 * h**2 * (h**2 + 2 * y2**2) / (1 - y2) ** 4
+    mu_Tn = (h ** 2 + y2 ** 2) / (1 - y2) ** 2 + beta_x * y1 + beta_y * y2
+    v_Tn = 4 * h ** 2 * (h ** 2 + 2 * y2 ** 2) / (1 - y2) ** 4
 
     # Z-score (one-sided test: large positive values reject H0)
-    Z = (Tn - (mu_Tn + p * h**2 / (1 - y2))) / np.sqrt(v_Tn)
+    Z = (Tn - (mu_Tn + p * h ** 2 / (1 - y2))) / np.sqrt(v_Tn)
 
     p_one = stats.norm.sf(Z)
 
@@ -225,9 +225,7 @@ def proportionality_test_signs(
     n1, p1 = X.shape
     n2, p2 = Y.shape
     if p1 != p2:
-        raise ValueError(
-            "X and Y must have the same number of columns (features)."
-        )
+        raise ValueError("X and Y must have the same number of columns (features).")
     p = p1
 
     # Spatial signs
@@ -336,11 +334,7 @@ def proportionality_plrt(X, Y, dist_moments="gaussian"):
     def f_density(x, y1, y2):
         if x < a or x > b:
             return 0.0
-        return (
-            (1 - y2)
-            * np.sqrt((b - x) * (x - a))
-            / (2 * np.pi * x * (y1 + y2 * x))
-        )
+        return (1 - y2) * np.sqrt((b - x) * (x - a)) / (2 * np.pi * x * (y1 + y2 * x))
 
     # compute a0 and a1 integrals
     def integrand_a0(x):
@@ -356,7 +350,7 @@ def proportionality_plrt(X, Y, dist_moments="gaussian"):
     mu_CLT = np.array(
         [
             y2 / (1 - y2) ** 2 + (y2 * beta_y) / (1 - y2),
-            0.5 * np.log((1 - h**2) / (1 - y2) ** 2)
+            0.5 * np.log((1 - h ** 2) / (1 - y2) ** 2)
             - 0.5 * beta_x * y1
             + 0.5 * beta_y * y2,
         ]
@@ -366,15 +360,13 @@ def proportionality_plrt(X, Y, dist_moments="gaussian"):
     Sigma_CLT = np.array(
         [
             [
-                2 * h**2 / (1 - y2) ** 4
+                2 * h ** 2 / (1 - y2) ** 4
                 + (beta_x * y1 + beta_y * y2) / (1 - y2) ** 2,
-                (beta_x * y1 + beta_y * y2) / (1 - y2)
-                + 2 * h**2 / (1 - y2) ** 2,
+                (beta_x * y1 + beta_y * y2) / (1 - y2) + 2 * h ** 2 / (1 - y2) ** 2,
             ],
             [
-                (beta_x * y1 + beta_y * y2) / (1 - y2)
-                + 2 * h**2 / (1 - y2) ** 2,
-                -2 * np.log(1 - h**2) + beta_x * y1 + beta_y * y2,
+                (beta_x * y1 + beta_y * y2) / (1 - y2) + 2 * h ** 2 / (1 - y2) ** 2,
+                -2 * np.log(1 - h ** 2) + beta_x * y1 + beta_y * y2,
             ],
         ]
     )
@@ -442,12 +434,12 @@ def proportional_cov_test_tsukuda(
 
     # Core statistic and variance estimate
     T = (m * n / (m + n)) * (
-        a_x2 / (a_x1**2) + a_y2 / (a_y1**2) - 2.0 * a_xy / (a_x1 * a_y1)
+        a_x2 / (a_x1 ** 2) + a_y2 / (a_y1 ** 2) - 2.0 * a_xy / (a_x1 * a_y1)
     )
 
-    b2_hat = ((m**2) / (m**2 + n**2)) * (a_x2 / (a_x1**2)) + (
-        (n**2) / (m**2 + n**2)
-    ) * (a_y2 / (a_y1**2))
+    b2_hat = ((m ** 2) / (m ** 2 + n ** 2)) * (a_x2 / (a_x1 ** 2)) + (
+        (n ** 2) / (m ** 2 + n ** 2)
+    ) * (a_y2 / (a_y1 ** 2))
 
     Z = T / (2.0 * b2_hat) if b2_hat > 0 else np.nan
 
@@ -513,9 +505,7 @@ def ahmad_2022_proportionality_test(X, Y, alternative="two-sided"):
     elif alternative == "less":
         p_value = stats.norm.cdf(z)
     else:
-        raise ValueError(
-            "alternative must be one of: 'two-sided', 'greater', 'less'."
-        )
+        raise ValueError("alternative must be one of: 'two-sided', 'greater', 'less'.")
 
     return {
         "stat": float(z),

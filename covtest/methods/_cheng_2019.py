@@ -13,10 +13,7 @@ def _phi(z: float) -> float:
 
 
 def spatial_median(
-    X: np.ndarray,
-    tol: float = 1e-7,
-    max_iter: int = 500,
-    eps: float = 1e-12,
+    X: np.ndarray, tol: float = 1e-7, max_iter: int = 500, eps: float = 1e-12,
 ) -> np.ndarray:
     """
     Compute the L1 (geometric) spatial median of points using Weiszfeld's algorithm.
@@ -113,9 +110,7 @@ def _A_from_gram(G: np.ndarray) -> float:
     return offdiag_sum / (n * (n - 1))
 
 
-def _C_from_gram_blocks(
-    G: np.ndarray, idx1: np.ndarray, idx2: np.ndarray
-) -> float:
+def _C_from_gram_blocks(G: np.ndarray, idx1: np.ndarray, idx2: np.ndarray) -> float:
     """
     Given a pooled Gram matrix G over stacked signs W = [U; V],
     compute C = mean_{i in idx1, j in idx2} (u_i^T v_j)^2.
@@ -124,9 +119,7 @@ def _C_from_gram_blocks(
     return np.mean(G12 * G12)
 
 
-def _T_from_gram(
-    G: np.ndarray, idx1: np.ndarray, idx2: np.ndarray, p: int
-) -> float:
+def _T_from_gram(G: np.ndarray, idx1: np.ndarray, idx2: np.ndarray, p: int) -> float:
     """
     Compute T' = p * (A + B - 2*C) from pooled Gram matrix.
     """
@@ -188,7 +181,7 @@ def _var_empirical_from_gram(
     varC = c_vals.var(ddof=1) / (n1 * n2)
 
     varD = varA + varB + 4.0 * varC
-    return (p**2) * varD
+    return (p ** 2) * varD
 
 
 def _perm_pvalue_from_gram(

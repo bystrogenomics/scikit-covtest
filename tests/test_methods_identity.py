@@ -145,9 +145,7 @@ def test_srivastava_2014_identity(identity_data, non_identity_data):
 
     # Check N < 4 validation
     short_data = np.random.default_rng(42).normal(size=(3, 5))
-    with pytest.raises(
-        ValueError, match="Srivastava \\(2014\\) test requires N >= 4."
-    ):
+    with pytest.raises(ValueError, match="Srivastava \\(2014\\) test requires N >= 4."):
         srivastava_2014_identity(short_data)
 
 
@@ -199,9 +197,7 @@ def test_ahmad_2015_identity_alias():
     assert ahmad_2015_identity is identity_T2_test
 
 
-def test_identity_covariance_test_public_interface(
-    identity_data, non_identity_data
-):
+def test_identity_covariance_test_public_interface(identity_data, non_identity_data):
     # Standard single sample check
     res = identity_covariance_test(identity_data, method="chen_2010")
     assert set(res.keys()) == {"stat", "p_value"}
@@ -277,9 +273,7 @@ def test_srivastava_2011_pvalues_and_smoke(identity_data):
     pvals = []
     for _ in range(200):
         X = rng.normal(size=(40, 100))
-        pvals.append(
-            srivastava2011_single_sample(X, Sigma=np.eye(100))["p_value"]
-        )
+        pvals.append(srivastava2011_single_sample(X, Sigma=np.eye(100))["p_value"])
 
     pvals = np.array(pvals)
     assert np.mean(pvals < 0.05) < 0.15
@@ -299,9 +293,7 @@ def test_identity_T2_null_calibration():
             rejections += 1
     rate = rejections / n_sims
     # With 5000 sims, 95% CI for true 0.05 rate is roughly [0.04, 0.06]
-    assert (
-        0.03 <= rate <= 0.08
-    ), f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
+    assert 0.03 <= rate <= 0.08, f"Rejection rate {rate:.3f} outside [0.03, 0.08]"
 
 
 def test_chen_xu_gram_formulas():
@@ -331,23 +323,23 @@ def test_chen_xu_gram_formulas():
     G = Xc @ Xc.T
     d = np.diag(G)
     D = d.sum()
-    D2 = (d**2).sum()
-    Q2 = (G**2).sum()
+    D2 = (d ** 2).sum()
+    Q2 = (G ** 2).sum()
 
     R = G.sum(axis=1) - d
     s_off = R.sum()
-    sumsq_off = (G**2).sum() - (d**2).sum()
-    sum_R2 = (R**2).sum()
+    sumsq_off = (G ** 2).sum() - (d ** 2).sum()
+    sum_R2 = (R ** 2).sum()
 
     P2 = n * (n - 1)
     P3 = n * (n - 1) * (n - 2)
     P4 = n * (n - 1) * (n - 2) * (n - 3)
 
     # Y5 general form
-    Y5_general = (s_off**2 - 4 * sum_R2 + 2 * sumsq_off) / P4
+    Y5_general = (s_off ** 2 - 4 * sum_R2 + 2 * sumsq_off) / P4
 
     # Y5 centered closed form
-    Y5_centered = (D**2 + 2 * Q2 - 6 * D2) / P4
+    Y5_centered = (D ** 2 + 2 * Q2 - 6 * D2) / P4
 
     # 1. Assert centered closed form matches general form to numerical tolerance
     assert np.isclose(Y5_centered, Y5_general)
@@ -359,7 +351,7 @@ def test_chen_xu_gram_formulas():
     Y4_general = (sum_R2 - sumsq_off) / P3
     T2_general = Y2_general - 2 * Y4_general + Y5_general
 
-    Y_tilde_2_general = (D**2 - D2) / P2
+    Y_tilde_2_general = (D ** 2 - D2) / P2
     Y_tilde_4_general = (D * s_off - 2 * (d * R).sum()) / P3
     T3_general = Y_tilde_2_general - 2 * Y_tilde_4_general + Y5_general
 
@@ -367,11 +359,7 @@ def test_chen_xu_gram_formulas():
     Y7_general = (d * R).sum() / P2
     Y8_general = Y_tilde_4_general
     delta_general = (
-        Y6_general
-        - 4 * Y7_general
-        + 2 * Y8_general
-        + 4 * Y4_general
-        - 3 * Y5_general
+        Y6_general - 4 * Y7_general + 2 * Y8_general + 4 * Y4_general - 3 * Y5_general
     )
 
     # Assert that pkg implementations match these general-form values

@@ -20,16 +20,12 @@ def _ensure_pd(A, ridge):
 
 def _c_from_sigma(Sigma, S_list, p, ridge=0.0):
     Sigma_inv = inv(_ensure_pd(Sigma, ridge))
-    return np.array(
-        [np.trace(Sigma_inv @ _ensure_pd(S, ridge)) / p for S in S_list]
-    )
+    return np.array([np.trace(Sigma_inv @ _ensure_pd(S, ridge)) / p for S in S_list])
 
 
 def _validate_inputs(X_groups, S_list, n_list, ridge):
     if X_groups is None and (S_list is None or n_list is None):
-        raise ValueError(
-            "Provide either X_groups, or S_list together with n_list."
-        )
+        raise ValueError("Provide either X_groups, or S_list together with n_list.")
 
     if X_groups is not None:
         p = X_groups[0].shape[1]
@@ -37,9 +33,7 @@ def _validate_inputs(X_groups, S_list, n_list, ridge):
             if X.ndim != 2:
                 raise ValueError(f"Group {k} must be a 2D array.")
             if X.shape[1] != p:
-                raise ValueError(
-                    "All groups must have the same number of features p."
-                )
+                raise ValueError("All groups must have the same number of features p.")
             N_k = X.shape[0]
             if N_k < p + 1:
                 raise ValueError(
@@ -64,9 +58,7 @@ def _validate_inputs(X_groups, S_list, n_list, ridge):
         raise ValueError("S_list and n_list must have the same length.")
 
     if p < 2:
-        raise ValueError(
-            "p must be at least 2 (proportionality is vacuous for p=1)."
-        )
+        raise ValueError("p must be at least 2 (proportionality is vacuous for p=1).")
 
     for k, n_val in enumerate(n_list):
         if n_val <= 0:
@@ -126,14 +118,10 @@ def fit_proportional_covariances(
     for it in range(1, max_iter + 1):
         Sigma_inv = inv(Sigma)
         c = np.array([np.trace(Sigma_inv @ S_list[k]) / p for k in range(K)])
-        Sigma_new = (
-            sum(n_list[k] * (S_list[k] / c[k]) for k in range(K)) / n_plus
-        )
+        Sigma_new = sum(n_list[k] * (S_list[k] / c[k]) for k in range(K)) / n_plus
         Sigma_new = _ensure_pd(Sigma_new, ridge)
 
-        rel = norm(Sigma_new - Sigma, ord="fro") / max(
-            1e-16, norm(Sigma, ord="fro")
-        )
+        rel = norm(Sigma_new - Sigma, ord="fro") / max(1e-16, norm(Sigma, ord="fro"))
         Sigma = Sigma_new
         if rel < tol:
             converged = True
@@ -171,13 +159,7 @@ def _wilks_stat_from_S(S_list, n_list, Sigma_hat, c_hat, ridge=0.0):
 
 
 def test_cov_proportionality(
-    X_groups=None,
-    *,
-    S_list=None,
-    n_list=None,
-    ridge=0.0,
-    tol=1e-10,
-    max_iter=10_000,
+    X_groups=None, *, S_list=None, n_list=None, ridge=0.0, tol=1e-10, max_iter=10_000,
 ):
     """
     Unadjusted Wilks LRT for H0: Sigma_k = c_k Sigma.
@@ -262,11 +244,7 @@ def bootstrap_bartlett_adjusted_proportionality_test(
 
     # 1) Unadjusted fit and statistic
     base = test_cov_proportionality(
-        S_list=S_list,
-        n_list=n_list,
-        ridge=ridge,
-        tol=tol,
-        max_iter=max_iter,
+        S_list=S_list, n_list=n_list, ridge=ridge, tol=tol, max_iter=max_iter,
     )
     Sigma_hat = base["Sigma_hat"]
     c_hat = base["c_hat"]

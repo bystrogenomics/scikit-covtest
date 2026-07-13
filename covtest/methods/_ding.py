@@ -5,9 +5,7 @@ from scipy.linalg import eigh  # type: ignore
 from scipy.stats import norm
 
 
-def two_way_sampling(
-    X: np.ndarray, Y: np.ndarray, n: int, seed: int = 2021
-) -> dict:
+def two_way_sampling(X: np.ndarray, Y: np.ndarray, n: int, seed: int = 2021) -> dict:
     """
     Perform two-way sampling on matrices X and Y.
 
@@ -89,7 +87,7 @@ def k_func(x: float) -> float:
         return 0
     if abs(x) <= 1:
         return 1
-    return np.exp(1 / 0.05**2 - 1 / (0.05**2 - (abs(x) - 1) ** 2))
+    return np.exp(1 / 0.05 ** 2 - 1 / (0.05 ** 2 - (abs(x) - 1) ** 2))
 
 
 def t_func(lambda_: np.ndarray, gamma: float, eta0: float) -> float:
@@ -117,10 +115,7 @@ def t_func(lambda_: np.ndarray, gamma: float, eta0: float) -> float:
 
 
 def check_efficient(
-    gamma: float,
-    lambda1: np.ndarray,
-    lambda2: np.ndarray,
-    epsilon: float = 0.05,
+    gamma: float, lambda1: np.ndarray, lambda2: np.ndarray, epsilon: float = 0.05,
 ) -> bool:
     """
     Check if the splitting is efficient.
@@ -142,10 +137,8 @@ def check_efficient(
     range1 = abs(lambda1[0] - lambda1[-1])
     range2 = abs(lambda2[0] - lambda2[-1])
     return not (
-        max(abs(gamma - lambda1[0]), abs(gamma - lambda1[-1]))
-        > range1 - epsilon
-        or max(abs(gamma - lambda2[0]), abs(gamma - lambda2[-1]))
-        > range2 - epsilon
+        max(abs(gamma - lambda1[0]), abs(gamma - lambda1[-1])) > range1 - epsilon
+        or max(abs(gamma - lambda2[0]), abs(gamma - lambda2[-1])) > range2 - epsilon
     )
 
 
@@ -210,9 +203,7 @@ def two_sample_test_(
     if thres is None:
         thres = 2.6
 
-    if abs(Tx - Ty) > (
-        thres / norm.ppf(1 - 0.05 / 2) * norm.ppf(1 - alpha / 2)
-    ):
+    if abs(Tx - Ty) > (thres / norm.ppf(1 - 0.05 / 2) * norm.ppf(1 - alpha / 2)):
         return {
             "efficient": True,
             "c": 1,

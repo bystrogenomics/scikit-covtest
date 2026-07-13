@@ -38,9 +38,7 @@ def plot_pval_histogram(pvals, ax=None):
         fig, ax = plt.subplots(figsize=(size1, size2))
 
     ax.hist(pvals, bins=20, density=True, alpha=0.7, color=_c1, edgecolor="k")
-    ax.hlines(
-        1, 0, 1, colors=_c2, linestyles="--", linewidth=2, label="Uniform(0,1)"
-    )
+    ax.hlines(1, 0, 1, colors=_c2, linestyles="--", linewidth=2, label="Uniform(0,1)")
     ax.set_xlim(0, 1)
     ax.set_xlabel("p-value", fontsize=fs1)
     ax.set_ylabel("Density", fontsize=fs1)
@@ -133,9 +131,7 @@ def plot_pval_survival(pvals, ax=None):
     ecdf_y = np.arange(1, n + 1) / n
     surv_obs = 1 - ecdf_y
     ax.plot(pvals, surv_obs, label="Observed", color=_c1, linewidth=2)
-    ax.plot(
-        pvals, 1 - pvals, "--", linewidth=2, label="Uniform(0,1)", color=_c2
-    )
+    ax.plot(pvals, 1 - pvals, "--", linewidth=2, label="Uniform(0,1)", color=_c2)
     ax.set_yscale("log")
     ax.set_xlabel("p-value", fontsize=fs1)
     ax.set_ylabel("Survival probability", fontsize=fs1)
@@ -166,12 +162,7 @@ def plot_pval_running_mean(pvals, ax=None):
     running_mean = np.cumsum(p) / np.arange(1, n + 1)
     ax.plot(np.arange(1, n + 1) / n, running_mean, linewidth=2, color=_c1)
     ax.plot(
-        [0, 1],
-        [0, 0.5],
-        "--",
-        linewidth=2,
-        label="Uniform expectation",
-        color=_c2,
+        [0, 1], [0, 0.5], "--", linewidth=2, label="Uniform expectation", color=_c2,
     )
     ax.set_xlabel("Fraction of tests", fontsize=fs1)
     ax.set_ylabel("Running mean of p-values", fontsize=fs1)
@@ -233,11 +224,7 @@ def plot_pval_zdist(pvals, ax=None):
 
     xx = np.linspace(0.0, float(np.max(zscores)), 200)
     ax.plot(
-        xx,
-        norm.pdf(xx, 0.0, 1.0) * 2.0,
-        linewidth=2,
-        color=_c2,
-        label="Half-N(0,1)",
+        xx, norm.pdf(xx, 0.0, 1.0) * 2.0, linewidth=2, color=_c2, label="Half-N(0,1)",
     )
     ax.set_xlabel("abs(z)", fontsize=fs1)
     ax.set_ylabel("Density", fontsize=fs1)
@@ -280,9 +267,7 @@ def plot_pval_calibration(pvals, n_bins=10, ax=None):
     pvals = np.asarray(pvals)
     bin_edges = np.linspace(0, 1, n_bins + 1)
     obs_props = [(pvals <= t).mean() for t in bin_edges[1:]]
-    ax.plot(
-        bin_edges[1:], obs_props, "o-", color=_c1, linewidth=2, label="Observed"
-    )
+    ax.plot(bin_edges[1:], obs_props, "o-", color=_c1, linewidth=2, label="Observed")
     ax.plot([0, 1], [0, 1], "--", linewidth=2, label="Uniform", color=_c2)
     ax.set_xlabel("Nominal cutoff", fontsize=fs1)
     ax.set_ylabel("Proportion ≤ cutoff", fontsize=fs1)
@@ -314,22 +299,13 @@ def qq_plot_log_p(pvalues, title):
     # Plot
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(
-        expected,
-        observed,
-        s=16,
-        alpha=0.7,
-        edgecolor="dodgerblue",
-        linewidth=0.5,
+        expected, observed, s=16, alpha=0.7, edgecolor="dodgerblue", linewidth=0.5,
     )
 
     # Identity line
     max_val = max(np.max(expected), np.max(observed)) * 1.05
     ax.plot(
-        [0, max_val],
-        [0, max_val],
-        linestyle="dotted",
-        color="gray",
-        linewidth=1.5,
+        [0, max_val], [0, max_val], linestyle="dotted", color="gray", linewidth=1.5,
     )
 
     # Axes styling
@@ -424,20 +400,11 @@ def plot_pval_diagnostics(
     expected = -np.log10(np.linspace(1 / (n + 1), n / (n + 1), n))
 
     axes[0].scatter(
-        expected,
-        observed,
-        s=16,
-        alpha=0.7,
-        edgecolor="dodgerblue",
-        linewidth=0.5,
+        expected, observed, s=16, alpha=0.7, edgecolor="dodgerblue", linewidth=0.5,
     )
     max_val = max(np.max(expected), np.max(observed)) * 1.05
     axes[0].plot(
-        [0, max_val],
-        [0, max_val],
-        linestyle="dotted",
-        color="gray",
-        linewidth=1.5,
+        [0, max_val], [0, max_val], linestyle="dotted", color="gray", linewidth=1.5,
     )
 
     axes[0].set_xlabel("Expected -log10(p)", fontsize=13)
@@ -451,9 +418,7 @@ def plot_pval_diagnostics(
     axes[0].tick_params(width=1.3, labelsize=12)
 
     # --- Right: Histogram ---
-    axes[1].hist(
-        pvalues, bins=bins, color="#4C72B0", edgecolor="black", alpha=0.85
-    )
+    axes[1].hist(pvalues, bins=bins, color="#4C72B0", edgecolor="black", alpha=0.85)
     axes[1].set_xlabel("P-value", fontsize=13)
     axes[1].set_ylabel("Frequency", fontsize=13)
     axes[1].set_title(title_right, fontsize=14, weight="bold")
@@ -482,9 +447,7 @@ def plot_pvalue_diagnostics_grid(pvals, n_bins=10, sname=None):
 
     # Temporarily override plt.show so individual functions draw into provided axes
     orig_show = plt.show
-    plt.show = (
-        lambda *args, **kwargs: None
-    )  # suppress automatic figure creation
+    plt.show = lambda *args, **kwargs: None  # suppress automatic figure creation
 
     try:
         # Call each diagnostic, passing the axis explicitly

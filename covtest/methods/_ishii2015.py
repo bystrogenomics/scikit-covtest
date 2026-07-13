@@ -33,9 +33,7 @@ def noise_reduction_pca(X, rank=1):
     lambda_tilde = np.zeros(rank)
     for i in range(rank):
         residual = trace_S - np.sum(eigvals[: i + 1])
-        lambda_tilde[i] = eigvals[i] - residual / (
-            n - 2
-        )  # Corrected denominator
+        lambda_tilde[i] = eigvals[i] - residual / (n - 2)  # Corrected denominator
 
     lambda_tilde = np.maximum(lambda_tilde, 0)
 

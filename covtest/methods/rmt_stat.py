@@ -250,12 +250,7 @@ def wishart_max_par(
 
 
 def d_wishart_max(
-    x: float,
-    ndf: int,
-    pdim: int,
-    var: float = 1,
-    beta: int = 1,
-    log: bool = False,
+    x: float, ndf: int, pdim: int, var: float = 1, beta: int = 1, log: bool = False,
 ) -> float:
     """
     Calculate the density of the maximum eigenvalue of the Wishart
@@ -364,9 +359,7 @@ def wishart_spike_par(
     """
     ratio = pdim / ndf
     above = spike > np.sqrt(ratio) * var
-    center = np.where(
-        above, (spike + var) * (1 + ratio * (var / spike)), np.nan
-    )
+    center = np.where(above, (spike + var) * (1 + ratio * (var / spike)), np.nan)
     scale = np.where(
         above,
         (
@@ -693,9 +686,7 @@ def d2(y1, y2):
         The result of the computed formula based on y1 and y2.
     """
     return (
-        (y1 + y2 - y1 * y2)
-        / (y1 * y2)
-        * np.log((y1 + y2) / (y1 + y2 - y1 * y2))
+        (y1 + y2 - y1 * y2) / (y1 * y2) * np.log((y1 + y2) / (y1 + y2 - y1 * y2))
         + y1 * (1 - y2) / (y2 * (y1 + y2)) * np.log(1 - y2)
         + y2 * (1 - y1) / (y1 * (y1 + y2)) * np.log(1 - y1)
     )
@@ -738,7 +729,7 @@ def sigma2_2(y1, y2):
     float
         The computed variance based on y1 and y2.
     """
-    return -(2 * y1**2 * np.log(1 - y2) + 2 * y2**2 * np.log(1 - y1)) / (
+    return -(2 * y1 ** 2 * np.log(1 - y2) + 2 * y2 ** 2 * np.log(1 - y1)) / (
         y1 + y2
     ) ** 2 - 2 * np.log((y1 + y2) / (y1 + y2 - y1 * y2))
 

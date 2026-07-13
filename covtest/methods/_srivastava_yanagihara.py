@@ -39,7 +39,7 @@ def a_1_hat(Y):
     N, p = Yc.shape
     n = N - 1  # degrees of freedom
     # tr(V) = tr(n*S) = n * tr(S)/p * p = n * a_1 * p  =>  a_1 = tr(V)/(n*p)
-    tr_V = np.sum(Yc**2)  # tr(Yc.T @ Yc) = sum of all squared entries
+    tr_V = np.sum(Yc ** 2)  # tr(Yc.T @ Yc) = sum of all squared entries
     return tr_V / (n * p)
 
 
@@ -79,17 +79,17 @@ def a_2_hat(Y):
     # Use the smaller of the two for efficiency.
     if N <= p:
         G = Yc @ Yc.T  # N×N Gram matrix
-        tr_M2 = (G**2).sum()  # = tr(G²) = tr(M²)
+        tr_M2 = (G ** 2).sum()  # = tr(G²) = tr(M²)
     else:
         V = Yc.T @ Yc  # p×p scatter matrix
-        tr_M2 = (V**2).sum()  # = tr(V²) = tr(M²)
+        tr_M2 = (V ** 2).sum()  # = tr(V²) = tr(M²)
 
-    norms_sq = np.sum(Yc**2, axis=1)  # ‖yᵢ‖² for each observation
-    tr_D2 = np.sum(norms_sq**2)  # tr(D²) = Σᵢ ‖yᵢ‖⁴
+    norms_sq = np.sum(Yc ** 2, axis=1)  # ‖yᵢ‖² for each observation
+    tr_D2 = np.sum(norms_sq ** 2)  # tr(D²) = Σᵢ ‖yᵢ‖⁴
     tr_D = np.sum(norms_sq)  # tr(D) = Σᵢ ‖yᵢ‖² = tr(V)
 
     f = p * N * (N - 1) * (N - 2) * (N - 3)
-    numerator = (N - 2) * n * tr_M2 - N * n * tr_D2 + tr_D**2
+    numerator = (N - 2) * n * tr_M2 - N * n * tr_D2 + tr_D ** 2
 
     return numerator / f
 

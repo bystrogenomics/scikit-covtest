@@ -33,9 +33,7 @@ def _validate_matrix(X):
     """Return X as a finite 2-D float array, raising ValueError otherwise."""
     X = np.asarray(X, dtype=float)
     if X.ndim != 2:
-        raise ValueError(
-            "X must be a 2D array of shape (n_samples, n_features)."
-        )
+        raise ValueError("X must be a 2D array of shape (n_samples, n_features).")
     if not np.isfinite(X).all():
         raise ValueError("X contains NaN/Inf.")
     return X
@@ -132,16 +130,14 @@ def estimate_Ei(X):
     X = _validate_matrix(X)
     n, p = X.shape
     if n < 4:
-        raise ValueError(
-            "Need n >= 4 for estimate_Ei (denominator (n-2)(n-3))."
-        )
+        raise ValueError("Need n >= 4 for estimate_Ei (denominator (n-2)(n-3)).")
     X_centered = X - X.mean(axis=0)
     S = np.cov(X_centered, rowvar=False, bias=False)
     trace_S = np.trace(S)
     trace_S2 = np.trace(S @ S)
-    Q = np.sum(np.sum(X_centered**2, axis=1) ** 2) / (n - 1)
+    Q = np.sum(np.sum(X_centered ** 2, axis=1) ** 2) / (n - 1)
     eta = (n - 1) / (n * (n - 2) * (n - 3))
-    return eta * ((n - 1) * (n - 2) * trace_S2 + trace_S**2 - n * Q)
+    return eta * ((n - 1) * (n - 2) * trace_S2 + trace_S ** 2 - n * Q)
 
 
 def estimate_E12(X, Y):
@@ -163,9 +159,7 @@ def estimate_E12(X, Y):
     n1, p1 = X.shape
     n2, p2 = Y.shape
     if p1 != p2:
-        raise ValueError(
-            "X and Y must have the same number of features (columns)."
-        )
+        raise ValueError("X and Y must have the same number of features (columns).")
     if n1 < 2 or n2 < 2:
         raise ValueError("Need n1 >= 2 and n2 >= 2 to form sample covariances.")
     X_centered = X - X.mean(axis=0)
