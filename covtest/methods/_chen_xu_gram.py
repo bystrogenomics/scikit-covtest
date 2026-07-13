@@ -76,8 +76,8 @@ def gram_blocks(X):
     G = Xc @ Xc.T  # n×n Gram matrix
     d = np.einsum("ij,ij->i", Xc, Xc)  # squared norms (faster than np.diag(G))
     D = d.sum()  # tr(G)
-    D2 = (d ** 2).sum()  # Σᵢ ‖yᵢ‖⁴
-    Q2 = (G ** 2).sum()  # tr(G²) = ‖G‖_F²
+    D2 = (d**2).sum()  # Σᵢ ‖yᵢ‖⁴
+    Q2 = (G**2).sum()  # tr(G²) = ‖G‖_F²
     return dict(n=n, p=p, D=D, D2=D2, Q2=Q2, Xc=Xc, G=G, d=d)
 
 
@@ -108,7 +108,7 @@ def T2_chen(blocks):
         raise ValueError(f"Chen 2010 T₂ requires n ≥ 4 (got n={n}).")
     Y2 = (Q2 - D2) / (n * (n - 1))
     Y4 = (-Q2 + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D ** 2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y2 - 2 * Y4 + Y5
 
 
@@ -131,9 +131,9 @@ def T3_xu(blocks):
     n, D, D2, Q2 = blocks["n"], blocks["D"], blocks["D2"], blocks["Q2"]
     if n < 4:
         raise ValueError(f"Xu 2023 T₃ requires n ≥ 4 (got n={n}).")
-    Y_tilde_2 = (D ** 2 - D2) / (n * (n - 1))
-    Y_tilde_4 = (-(D ** 2) + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D ** 2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y_tilde_2 = (D**2 - D2) / (n * (n - 1))
+    Y_tilde_4 = (-(D**2) + 2 * D2) / (n * (n - 1) * (n - 2))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y_tilde_2 - 2 * Y_tilde_4 + Y5
 
 
@@ -159,9 +159,9 @@ def delta_hat_xu(blocks):
         raise ValueError(f"Xu 2023 δ̂ requires n ≥ 5 (got n={n}).")
     Y6 = D2 / n
     Y7 = -D2 / (n * (n - 1))
-    Y_tilde_4 = (-(D ** 2) + 2 * D2) / (n * (n - 1) * (n - 2))  # Y8 = Ỹ₄
+    Y_tilde_4 = (-(D**2) + 2 * D2) / (n * (n - 1) * (n - 2))  # Y8 = Ỹ₄
     Y4 = (-Q2 + 2 * D2) / (n * (n - 1) * (n - 2))
-    Y5 = (D ** 2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
+    Y5 = (D**2 + 2 * Q2 - 6 * D2) / (n * (n - 1) * (n - 2) * (n - 3))
     return Y6 - 4 * Y7 + 2 * Y_tilde_4 + 4 * Y4 - 3 * Y5
 
 
@@ -186,8 +186,8 @@ def sigma2_hat_xu(delta, T3, n, p):
     float  (always positive by construction; see Remark after eq. 14)
     """
     ratio = delta / T3  # estimates κ = E(R₁⁴)/E²(R₁²)
-    factor = p ** 2 / n ** 2
-    term1 = 2 * factor * (3 * p ** 2 / (p + 2) ** 2 * ratio ** 2 - 1)
+    factor = p**2 / n**2
+    term1 = 2 * factor * (3 * p**2 / (p + 2) ** 2 * ratio**2 - 1)
     term2 = 4 * factor * (p / (p + 2) * ratio - 1)
     sigma2 = term1 - term2
     # Guard: σ̂² should be positive; use a small positive floor to be safe

@@ -14,11 +14,17 @@ def test_load_iris_X_y_shape():
 
 
 def test_load_iris_with_names():
-    X, y, feature_names, target_names = load_iris(return_X_y=True, return_names=True)
+    X, y, feature_names, target_names = load_iris(
+        return_X_y=True, return_names=True
+    )
     assert isinstance(X, np.ndarray)
     assert isinstance(y, np.ndarray)
-    assert isinstance(feature_names, np.ndarray) or isinstance(feature_names, list)
-    assert isinstance(target_names, np.ndarray) or isinstance(target_names, list)
+    assert isinstance(feature_names, np.ndarray) or isinstance(
+        feature_names, list
+    )
+    assert isinstance(target_names, np.ndarray) or isinstance(
+        target_names, list
+    )
     assert X.shape == (150, 4)
     assert y.shape == (150,)
     assert len(feature_names) == 4

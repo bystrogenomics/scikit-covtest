@@ -64,7 +64,9 @@ def ahmad2015_sphericity_test(
 
     T1 = (p * (E3 / E2)) - 1.0
 
-    z, used_cal = ahmad2015._standardize_T(T1, n=n, p=p, calibration=calibration)
+    z, used_cal = ahmad2015._standardize_T(
+        T1, n=n, p=p, calibration=calibration
+    )
 
     if tail == "upper":
         pval = float(stats.norm.sf(z))
@@ -237,7 +239,11 @@ def srivastava_2005_sphericity(X):
 
 
 def muirhead_sphericity_lrt(
-    X=None, S=None, n=None, center=True, use_bartlett_correction=True,
+    X=None,
+    S=None,
+    n=None,
+    center=True,
+    use_bartlett_correction=True,
 ):
     """Muirhead likelihood ratio test (LRT) for sphericity.
 
@@ -420,7 +426,7 @@ def _spatial_sign_cov(X):
     norms = np.linalg.norm(X, axis=1, keepdims=True)  # (n, 1)
     mask = norms.ravel() > 0
     Xs = X[mask] / norms[mask]  # unit-norm rows
-    Xs_scaled = Xs * p ** 0.5  # scaled to norm sqrt(p)
+    Xs_scaled = Xs * p**0.5  # scaled to norm sqrt(p)
     B = (Xs_scaled.T @ Xs_scaled) / n  # (p, p)
     return B
 
@@ -484,27 +490,27 @@ def fisher_2010_sphericity_test(X, center=True):
 
     # --- Srivastava (2005) unbiased estimator of a_2 = tr(Sigma^2)/p ----
     cn = (n * n) / ((n - 1) * (n + 2))
-    a2_hat = cn * (trS2 - trS ** 2 / n) / p
+    a2_hat = cn * (trS2 - trS**2 / n) / p
 
     # --- Fisher (2010) unbiased estimator of a_4 = tr(Sigma^4)/p --------
     #   a_hat_4 = (tau/p) * [tr(S^4)
     #             + b*tr(S^3)*tr(S) + c**{trS2}^2
     #             + d*tr(S^2)*(trS)^2 + e*(trS)^4]
-    denom = n ** 2 + n + 2
-    tau = (n ** 5 * denom) / (
+    denom = n**2 + n + 2
+    tau = (n**5 * denom) / (
         (n + 1) * (n + 2) * (n + 4) * (n + 6) * (n - 1) * (n - 2) * (n - 3)
     )
     b_coef = -4.0 / n
-    c_star = -(2 * n ** 2 + 3 * n - 6) / (n * denom)
+    c_star = -(2 * n**2 + 3 * n - 6) / (n * denom)
     d_coef = 2 * (5 * n + 6) / (n * denom)
-    e_coef = -(5 * n + 6) / (n ** 2 * denom)
+    e_coef = -(5 * n + 6) / (n**2 * denom)
 
     a4_hat = (tau / p) * (
         trS4
         + b_coef * trS3 * trS
-        + c_star * trS2 ** 2
-        + d_coef * trS2 * trS ** 2
-        + e_coef * trS ** 4
+        + c_star * trS2**2
+        + d_coef * trS2 * trS**2
+        + e_coef * trS**4
     )
 
     if a2_hat <= 0:
@@ -517,8 +523,8 @@ def fisher_2010_sphericity_test(X, center=True):
     # Scale factor: n / sqrt(8*(8+12c+c^2))  -- see implementation notes
     T = (
         n
-        / (8 * (8 + 12 * c_ratio + c_ratio ** 2)) ** 0.5
-        * (a4_hat / a2_hat ** 2 - 1.0)
+        / (8 * (8 + 12 * c_ratio + c_ratio**2)) ** 0.5
+        * (a4_hat / a2_hat**2 - 1.0)
     )
     pval = float(stats.norm.sf(T))  # right-tailed
     return result_dict(float(T), pval)
@@ -591,7 +597,7 @@ def srivastava_2014_sphericity_test(X):
     #   [(N-2)*n * tr(V^2)  -  N*n * tr(D^2)  +  (tr V)^2]
     #   / [p * N*(N-1)*(N-2)*(N-3)]
     # with n = N-1 so (N-2)*n = (N-2)*(N-1) and N*n = N*(N-1).
-    num_a2 = (N - 2) * n * trV2 - N * n * sum_d_sq + sum_d ** 2
+    num_a2 = (N - 2) * n * trV2 - N * n * sum_d_sq + sum_d**2
     den_a2 = float(p) * N * n * (N - 2) * (N - 3)
     a2_hat = num_a2 / den_a2
 
@@ -605,7 +611,7 @@ def srivastava_2014_sphericity_test(X):
 
     # Scale (n/2) follows the same convention as the existing
     # srivastava_2005_sphericity implementation -- see implementation notes
-    T1 = (n / 2.0) * (a2_hat / a1_hat ** 2 - 1.0)
+    T1 = (n / 2.0) * (a2_hat / a1_hat**2 - 1.0)
     pval = float(stats.norm.sf(T1))  # right-tailed
     return result_dict(float(T1), pval)
 
@@ -685,18 +691,18 @@ def hu_2019_sphericity_test(X, center=True, return_all=False):
     # Spectral moments via eigenvalues (more stable than matrix powers)
     eigs = np.linalg.eigvalsh(B)  # all real, >= 0
 
-    b2 = float(np.sum(eigs ** 2)) / p
-    b3 = float(np.sum(eigs ** 3)) / p
-    b4 = float(np.sum(eigs ** 4)) / p
+    b2 = float(np.sum(eigs**2)) / p
+    b3 = float(np.sum(eigs**3)) / p
+    b4 = float(np.sum(eigs**4)) / p
 
     # Bias-corrected spectral moments
     alpha2 = b2 - c_n
     alpha4 = (
         b4
         - 4.0 * c_n * b3
-        - 2.0 * c_n * b2 ** 2
-        + 10.0 * c_n ** 2 * b2
-        - 5.0 * c_n ** 3
+        - 2.0 * c_n * b2**2
+        + 10.0 * c_n**2 * b2
+        - 5.0 * c_n**3
     )
 
     T1 = alpha2 - 1.0
@@ -704,16 +710,18 @@ def hu_2019_sphericity_test(X, center=True, return_all=False):
 
     # Standardised individual statistics
     z1 = (n * T1 + 1.0) / 2.0
-    denom_T2 = 8.0 * (18.0 + 12.0 * c_n + c_n ** 2)
-    z2 = (n * T2 + 6.0 - c_n) / denom_T2 ** 0.5
+    denom_T2 = 8.0 * (18.0 + 12.0 * c_n + c_n**2)
+    z2 = (n * T2 + 6.0 - c_n) / denom_T2**0.5
 
     Tm = max(z1, z2)
 
     # P-value for Tm: P(Tm > t) = 1 - P(z1 <= t AND z2 <= t)
     # Null correlation: rho = 24 / sqrt(4 * 8*(18+12c+c^2)) = 6/sqrt(2*(18+12c+c^2))
-    rho = 6.0 / (2.0 * (18.0 + 12.0 * c_n + c_n ** 2)) ** 0.5
+    rho = 6.0 / (2.0 * (18.0 + 12.0 * c_n + c_n**2)) ** 0.5
     cov_mat = np.array([[1.0, rho], [rho, 1.0]])
-    bvn_cdf = stats.multivariate_normal.cdf([Tm, Tm], mean=[0.0, 0.0], cov=cov_mat)
+    bvn_cdf = stats.multivariate_normal.cdf(
+        [Tm, Tm], mean=[0.0, 0.0], cov=cov_mat
+    )
     pval_Tm = float(1.0 - bvn_cdf)
 
     if not return_all:
@@ -788,12 +796,16 @@ def xu_2023_sphericity_test(X, center=False):
     n, p = X.shape
 
     if n < 5:
-        raise ValueError("Xu (2023) test requires n >= 5 (5th-order U-statistic).")
+        raise ValueError(
+            "Xu (2023) test requires n >= 5 (5th-order U-statistic)."
+        )
 
     if center:
         X = X - X.mean(axis=0, keepdims=True)
 
-    _, d, R, s_off, sumsq_off, sum_R2, sum_d, sum_d_sq, sum_dR = _gram_aggregates(X)
+    _, d, R, s_off, sumsq_off, sum_R2, sum_d, sum_d_sq, sum_dR = (
+        _gram_aggregates(X)
+    )
 
     P2 = n * (n - 1)
     P3 = P2 * (n - 2)
@@ -802,18 +814,20 @@ def xu_2023_sphericity_test(X, center=False):
     # ---- CZZ Y-statistics ------------------------------------------------
     Y2 = sumsq_off / P2
     Y4 = (sum_R2 - sumsq_off) / P3
-    Y5 = (s_off ** 2 - 4.0 * sum_R2 + 2.0 * sumsq_off) / P4
+    Y5 = (s_off**2 - 4.0 * sum_R2 + 2.0 * sumsq_off) / P4
 
     # CZZ estimators of tr(Sigma) and tr(Sigma^2)
     T1 = sum_d / n - s_off / P2
     T2 = Y2 - 2.0 * Y4 + Y5
 
     if T1 <= 0:
-        raise ValueError("Nonpositive T1 (estimator of tr(Sigma)); check data quality.")
+        raise ValueError(
+            "Nonpositive T1 (estimator of tr(Sigma)); check data quality."
+        )
 
     # ---- Y_tilde statistics (use squared norms d_i) ----------------------
     # Y_tilde_2 = sum_{i1 != i2} d_{i1}*d_{i2} / P2
-    Ytilde2 = (sum_d ** 2 - sum_d_sq) / P2
+    Ytilde2 = (sum_d**2 - sum_d_sq) / P2
 
     # Y_tilde_4 = sum_{i1,i2,i3 all distinct} d_{i1}*G_{i2,i3} / P3
     #           = (sum_d * s_off - 2 * sum_dR) / P3
@@ -823,7 +837,9 @@ def xu_2023_sphericity_test(X, center=False):
     T3 = Ytilde2 - 2.0 * Ytilde4 + Y5
 
     if T3 <= 0:
-        raise ValueError("Nonpositive T3 (estimator of tr^2(Sigma)); cannot proceed.")
+        raise ValueError(
+            "Nonpositive T3 (estimator of tr^2(Sigma)); cannot proceed."
+        )
 
     # ---- Y_6, Y_7, Y_8 for delta (5th-order U-statistic) ----------------
     # Y_6 = (1/n) * sum_i d_i^2
@@ -841,9 +857,9 @@ def xu_2023_sphericity_test(X, center=False):
     q = p / (p + 2.0)  # = p/(p+2)
     r = delta / T3  # ratio delta/T3
 
-    sigma_sq_0 = 2.0 / (n ** 2) * p ** 2 * (3.0 * q ** 2 * r ** 2 - 1.0) - 4.0 / (
-        n ** 2
-    ) * p ** 2 * (q * r - 1.0)
+    sigma_sq_0 = 2.0 / (n**2) * p**2 * (
+        3.0 * q**2 * r**2 - 1.0
+    ) - 4.0 / (n**2) * p**2 * (q * r - 1.0)
 
     if sigma_sq_0 <= 0:
         raise ValueError(
@@ -851,7 +867,7 @@ def xu_2023_sphericity_test(X, center=False):
             "is invalid for this dataset."
         )
 
-    sigma_0 = sigma_sq_0 ** 0.5
+    sigma_0 = sigma_sq_0**0.5
 
     U_hat = (p / sigma_0) * (p * T2 / T3 - 1.0)
     pval = float(stats.norm.sf(U_hat))  # right-tailed

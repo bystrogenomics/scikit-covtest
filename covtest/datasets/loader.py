@@ -4,7 +4,9 @@ import io
 import numpy as np
 
 
-def load_mnist(split: str = "train", return_X_y: bool = True, normalize: bool = True):
+def load_mnist(
+    split: str = "train", return_X_y: bool = True, normalize: bool = True
+):
     """
     Load the MNIST dataset from an .npz file stored in the package.
 

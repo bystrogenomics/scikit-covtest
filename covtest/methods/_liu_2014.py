@@ -24,20 +24,20 @@ def _beta_hat(data):
     # norms and traces
     norms2 = np.einsum("ij,ij->i", X, X)  # ||X_i||^2
     sum_norms2 = norms2.sum()
-    sum_norms4 = (norms2 ** 2).sum()
+    sum_norms4 = (norms2**2).sum()
 
     # sum_{i != j} tr(X_i X_i^T X_j X_j^T) = sum_{i != j} (X_i^T X_j)^2
     G = X @ X.T  # Gram matrix
-    off_diag_sq_sum = (G ** 2).sum() - np.diag(G ** 2).sum()
+    off_diag_sq_sum = (G**2).sum() - np.diag(G**2).sum()
 
     num = (
         sum_norms4 / (p * (N - 1))
-        - (sum_norms2 ** 2) / (p * N * (N - 1))
+        - (sum_norms2**2) / (p * N * (N - 1))
         - 2 * off_diag_sq_sum / (p * N * (N - 1))
     )
 
     denom = (1.0 / p) * (
-        (X ** 2).mean(axis=0) ** 2
+        (X**2).mean(axis=0) ** 2
     ).sum()  # (1/p) * sum_k ( (1/N) sum_i x_{ik}^2 )^2
 
     return num / denom

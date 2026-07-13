@@ -117,7 +117,9 @@ def SUD(pvalues, critical_values, start_idx_sud):
     if m == 1:
         raise ValueError("SUD(): Only 1 critical value. Use SS() instead.")
     if m != len(pvalues):
-        raise ValueError("SUD(): Length of critical_values and pvalues must match.")
+        raise ValueError(
+            "SUD(): Length of critical_values and pvalues must match."
+        )
     if start_idx_sud < 1 or start_idx_sud > m:
         raise ValueError("SUD(): start_idx_sud out of bounds.")
 
@@ -623,7 +625,9 @@ def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
         raise ValueError("BlaRoq(): Prior pii can only have positive elements")
 
     if len(pii) != k:
-        raise ValueError("BlaRoq(): Prior pii must have the same length as pvalues")
+        raise ValueError(
+            "BlaRoq(): Prior pii must have the same length as pvalues"
+        )
 
     # Normalize prior
     pii = pii / np.sum(pii)
@@ -657,7 +661,9 @@ def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
     }
 
 
-def weighted_bh(pvals: np.ndarray, weights: np.ndarray, alpha: float = 0.05) -> Dict:
+def weighted_bh(
+    pvals: np.ndarray, weights: np.ndarray, alpha: float = 0.05
+) -> Dict:
     """Apply weighted Benjamini-Hochberg false discovery rate correction.
 
     The weighted Benjamini-Hochberg procedure allows incorporating prior
@@ -787,7 +793,9 @@ def weighted_bh(pvals: np.ndarray, weights: np.ndarray, alpha: float = 0.05) -> 
     }
 
 
-def storey_qvalues(pvals: np.ndarray, alpha: float = 0.05, lambdas=None) -> Dict:
+def storey_qvalues(
+    pvals: np.ndarray, alpha: float = 0.05, lambdas=None
+) -> Dict:
     """Apply Storey's q-value method for false discovery rate estimation.
 
     Storey's method improves upon the Benjamini-Hochberg procedure by estimating

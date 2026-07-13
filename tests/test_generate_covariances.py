@@ -79,7 +79,9 @@ def test_generate_marchenko_pastur(rng):
 
 
 def test_generate_spiked_covariance(rng):
-    cov = gc.generate_spiked_covariance(5, spike_eigenvalue=10.0, num_spikes=2, rng=rng)
+    cov = gc.generate_spiked_covariance(
+        5, spike_eigenvalue=10.0, num_spikes=2, rng=rng
+    )
     assert cov.shape == (5, 5)
     assert is_symmetric(cov)
     assert is_pos_def(cov)

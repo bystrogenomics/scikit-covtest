@@ -163,7 +163,7 @@ def boxm_test(X, Y, type="chi.squared"):
 
     c1 = (
         (1 / (n - 1) + 1 / (m - 1) - 1 / (n + m - 2))
-        * (2 * p ** 2 + 3 * p - 1)
+        * (2 * p**2 + 3 * p - 1)
         / (6 * (p + 1))
     )
     if type == "chi.squared":
@@ -178,11 +178,11 @@ def boxm_test(X, Y, type="chi.squared"):
             * (1 / (n - 1) ** 2 + 1 / (m - 1) ** 2 - 1 / (n + m - 2) ** 2)
         )
         a1 = p * (p + 1) / 2
-        a2 = (a1 + 2) / abs(c2 - c1 ** 2)
+        a2 = (a1 + 2) / abs(c2 - c1**2)
         b1 = (1 - c1 - a1 / a2) / a1
         b2 = (1 - c1 - 2 / a2) / a2
 
-        if c2 > c1 ** 2:
+        if c2 > c1**2:
             test_statistic = -2 * b1 * log_M
         else:
             test_statistic = -(a2 * b2 * log_M) / (a1 * (1 + 2 * b2 * log_M))
@@ -233,7 +233,9 @@ def ishii_two_sample(X, Y, test="full"):
     """
     X, Y = validate_matching_data_matrices(X, Y)
     if X.shape[1] < 1000:
-        raise Warning("Ishii et al (2015) known to be unreliable when d is small")
+        raise Warning(
+            "Ishii et al (2015) known to be unreliable when d is small"
+        )
     # Transpose to (n_features, n_samples) for NR-PCA which expects features as rows
     X1 = X.T
     X2 = Y.T
@@ -308,7 +310,7 @@ def _schott_2001_two_sample_stat(matrix_list):
             nj = ns[j] - 1
             Sj = samplecov[j]
             term_j = invPooled @ Sj @ invPooled
-            doublesum += ni * nj / (ntot ** 2) * np.trace(Si @ term_j)
+            doublesum += ni * nj / (ntot**2) * np.trace(Si @ term_j)
 
     stat = ntot / 2.0 * (singlesum - doublesum)
     return stat
@@ -382,7 +384,7 @@ def _srivastava_yanagihara_stat(x):
         covartrace = np.trace(covar)
         covar2trace = np.trace(covar @ covar)
         a2i[i] = ((n - 1) ** 2 / (p * (n - 2) * (n + 1))) * (
-            covar2trace - (1.0 / (n - 1)) * covartrace ** 2
+            covar2trace - (1.0 / (n - 1)) * covartrace**2
         )
         a1i[i] = covartrace / p
 
@@ -392,28 +394,28 @@ def _srivastava_yanagihara_stat(x):
     pooledCov = Apool / ntot
     pooledcov2trace = np.trace(pooledCov @ pooledCov)
     pooledcovtrace = np.trace(pooledCov)
-    a2 = (ntot ** 2 / (p * (ntot - 1) * (ntot + 2))) * (
-        pooledcov2trace - (1.0 / ntot) * pooledcovtrace ** 2
+    a2 = (ntot**2 / (p * (ntot - 1) * (ntot + 2))) * (
+        pooledcov2trace - (1.0 / ntot) * pooledcovtrace**2
     )
     a1 = pooledcovtrace / p
 
-    a3 = (1.0 / (ntot * (ntot ** 2 + 3 * ntot + 4))) * (
+    a3 = (1.0 / (ntot * (ntot**2 + 3 * ntot + 4))) * (
         np.trace(Apool @ Apool @ Apool) / p
         - 3.0 * ntot * (ntot + 1) * p * a2 * a1
-        - ntot * p ** 2 * a1 ** 3
+        - ntot * p**2 * a1**3
     )
 
-    c0 = ntot ** 4 + 6 * ntot ** 3 + 21 * ntot ** 2 + 18 * ntot
-    c1 = 4 * ntot ** 3 + 12 * ntot ** 2 + 18 * ntot
-    c2 = 6 * ntot ** 2 + 4 * ntot
-    c3 = 2 * ntot ** 3 + 5 * ntot ** 2 + 7 * ntot
+    c0 = ntot**4 + 6 * ntot**3 + 21 * ntot**2 + 18 * ntot
+    c1 = 4 * ntot**3 + 12 * ntot**2 + 18 * ntot
+    c2 = 6 * ntot**2 + 4 * ntot
+    c3 = 2 * ntot**3 + 5 * ntot**2 + 7 * ntot
 
     a4 = (1.0 / c0) * (
         np.trace(Apool @ Apool @ Apool @ Apool) / p
         - c1 * p * a1  # FIXED: added × p
-        - c2 * p ** 2 * a1 ** 2 * a2  # FIXED: p → p**2
-        - c3 * p * a2 ** 2  # FIXED: added × p
-        - ntot * p ** 3 * a1 ** 4
+        - c2 * p**2 * a1**2 * a2  # FIXED: p → p**2
+        - c3 * p * a2**2  # FIXED: added × p
+        - ntot * p**3 * a1**4
     )
 
     ksi2i = np.zeros(len_x)
@@ -426,11 +428,11 @@ def _srivastava_yanagihara_stat(x):
             4.0
             / (ns[i] - 1) ** 2
             * (
-                (a2 ** 2 / a1 ** 4)
+                (a2**2 / a1**4)
                 + 2.0
                 * (ns[i] - 1)
                 / p
-                * ((a2 ** 3 / a1 ** 6) - 2.0 * a2 * a3 / a1 ** 5 + a4 / a1 ** 4)
+                * ((a2**3 / a1**6) - 2.0 * a2 * a3 / a1**5 + a4 / a1**4)
             )
         )
 
@@ -511,7 +513,7 @@ def _srivastava_2007_stat(x):
         a2i[i] = (
             (n - 1) ** 2
             / (p * (n - 2) * (n + 1))
-            * (covar2trace - (1.0 / (n - 1)) * covartrace ** 2)
+            * (covar2trace - (1.0 / (n - 1)) * covartrace**2)
         )
 
         ntot += n - 1
@@ -521,24 +523,24 @@ def _srivastava_2007_stat(x):
     pooledcov2trace = np.trace(pooledCov @ pooledCov)
     pooledcovtrace = np.trace(pooledCov)
     a2 = (
-        ntot ** 2
+        ntot**2
         / (p * (ntot - 1) * (ntot + 2))
-        * (pooledcov2trace - (1.0 / ntot) * pooledcovtrace ** 2)
+        * (pooledcov2trace - (1.0 / ntot) * pooledcovtrace**2)
     )
 
     a1 = pooledcovtrace / p
 
-    c0 = ntot ** 4 + 6 * ntot ** 3 + 21 * ntot ** 2 + 18 * ntot
-    c1 = 4 * ntot ** 3 + 12 * ntot ** 2 + 18 * ntot
-    c2 = 6 * ntot ** 2 + 4 * ntot
-    c3 = 2 * ntot ** 3 + 5 * ntot ** 2 + 7 * ntot
+    c0 = ntot**4 + 6 * ntot**3 + 21 * ntot**2 + 18 * ntot
+    c1 = 4 * ntot**3 + 12 * ntot**2 + 18 * ntot
+    c2 = 6 * ntot**2 + 4 * ntot
+    c3 = 2 * ntot**3 + 5 * ntot**2 + 7 * ntot
 
     a4 = (1.0 / c0) * (
         np.trace(Apool @ Apool @ Apool @ Apool) / p
         - c1 * p * a1  # FIXED: added × p
-        - c2 * p ** 2 * a1 ** 2 * a2  # FIXED: added × p**2
-        - c3 * p * a2 ** 2  # FIXED: added × p
-        - ntot * a1 ** 4 * p ** 3
+        - c2 * p**2 * a1**2 * a2  # FIXED: added × p**2
+        - c3 * p * a2**2  # FIXED: added × p
+        - ntot * a1**4 * p**3
     )
 
     eta2i = np.zeros(len_x)
@@ -549,8 +551,8 @@ def _srivastava_2007_stat(x):
         eta2i[i] = (
             4.0
             / (ns[i] - 1) ** 2
-            * a2 ** 2
-            * (1.0 + 2.0 * (ns[i] - 1) * a4 / (p * a2 ** 2))
+            * a2**2
+            * (1.0 + 2.0 * (ns[i] - 1) * a4 / (p * a2**2))
         )
 
         abarnum += a2i[i] / eta2i[i]
@@ -653,12 +655,12 @@ def wald_two_sample(X, Y):
     s_pooled_inv = la.inv(s_pooled)
 
     # Quadratic forms
-    term1 = ((n - 1) / (n + m - 2) - (n - 1) ** 2 / (n + m - 2) ** 2) * np.trace(
-        (s1 @ s_pooled_inv) @ (s1 @ s_pooled_inv)
-    )
-    term2 = ((m - 1) / (n + m - 2) - (m - 1) ** 2 / (n + m - 2) ** 2) * np.trace(
-        (s2 @ s_pooled_inv) @ (s2 @ s_pooled_inv)
-    )
+    term1 = (
+        (n - 1) / (n + m - 2) - (n - 1) ** 2 / (n + m - 2) ** 2
+    ) * np.trace((s1 @ s_pooled_inv) @ (s1 @ s_pooled_inv))
+    term2 = (
+        (m - 1) / (n + m - 2) - (m - 1) ** 2 / (n + m - 2) ** 2
+    ) * np.trace((s2 @ s_pooled_inv) @ (s2 @ s_pooled_inv))
     term3 = (
         -2
         * (n - 1)
@@ -723,7 +725,7 @@ def tyler_two_sample(X, Y, unknown_mean=False):
     A = la.solve(M1, M2)
     trA = np.trace(A)
     trA2 = np.trace(A @ A)
-    D_hat = p * (trA2 / (trA ** 2)) - 1.0
+    D_hat = p * (trA2 / (trA**2)) - 1.0
 
     if unknown_mean:
         T2_tr = D_hat - (n1 - 1) / (n1 - p - 1) - (p / (n2 - 1))
@@ -783,7 +785,9 @@ def he_2018_two_sample(
         N = int(np.floor(X.shape[1] ** 0.7))
 
     def double_sum(X1, X2):
-        result = np.sum(X1, axis=0) * np.sum(X2, axis=0) - np.sum(X1 * X2, axis=0)
+        result = np.sum(X1, axis=0) * np.sum(X2, axis=0) - np.sum(
+            X1 * X2, axis=0
+        )
         return result
 
     def triple_sum(X1, X2, X3):
@@ -890,7 +894,10 @@ def he_2018_two_sample(
 
 
 def chang2016(
-    X: np.ndarray, Y: np.ndarray, J: int = 2500, seed: int = 2021,
+    X: np.ndarray,
+    Y: np.ndarray,
+    J: int = 2500,
+    seed: int = 2021,
 ) -> Dict[str, Any]:
     """
     Perform the Two-Sample HD test for the equality of two covariance matrices from
@@ -931,8 +938,8 @@ def chang2016(
     xa = X - np.mean(X, axis=0)
     ya = Y - np.mean(Y, axis=0)
 
-    vx = ((xa ** 2).T @ (xa ** 2)) / n1 - Sx ** 2
-    vy = ((ya ** 2).T @ (ya ** 2)) / n2 - Sy ** 2
+    vx = ((xa**2).T @ (xa**2)) / n1 - Sx**2
+    vy = ((ya**2).T @ (ya**2)) / n2 - Sy**2
 
     with np.errstate(invalid="ignore"):
         deno = np.sqrt(vx / n1 + vy / n2)
@@ -1000,7 +1007,9 @@ def schott2007(X: np.ndarray, Y: np.ndarray) -> Dict[str, Any]:
     Sxx = Sx * n1 / (n1 - 1)
     Syy = Sy * n2 / (n2 - 1)
 
-    SsS = (Sxx * (n1 - 1) + Syy * (n2 - 1)) / (n1 + n2 - 2)  # FIXED: df-weighted
+    SsS = (Sxx * (n1 - 1) + Syy * (n2 - 1)) / (
+        n1 + n2 - 2
+    )  # FIXED: df-weighted
 
     eta1 = ((n1 - 1) + 2) * ((n1 - 1) - 1)
     eta2 = ((n2 - 1) + 2) * ((n2 - 1) - 1)
@@ -1015,7 +1024,10 @@ def schott2007(X: np.ndarray, Y: np.ndarray) -> Dict[str, Any]:
         * (
             (n1 + n2 - 2) ** 2
             / ((n1 + n2) * (n1 + n2 - 2 - 1))
-            * (np.sum(np.diag(SsS @ SsS)) - (np.sum(np.diag(SsS))) ** 2 / (n1 + n2 - 2))
+            * (
+                np.sum(np.diag(SsS @ SsS))
+                - (np.sum(np.diag(SsS))) ** 2 / (n1 + n2 - 2)
+            )
         )
         ** 2
     )
@@ -1068,7 +1080,9 @@ def ding2023_two_sample(
     test_result : dict
         Result of the two-sample test.
     """
-    if const is not None and (not isinstance(const, float) or not (0.1 <= const <= 10)):
+    if const is not None and (
+        not isinstance(const, float) or not (0.1 <= const <= 10)
+    ):
         raise ValueError("const must be a float between 0.1 and 10.")
     if not isinstance(alpha, float) or not (0 < alpha < 1):
         raise ValueError("alpha must be a float between 0 and 1.")
@@ -1220,7 +1234,9 @@ def cai_liu_xia_2013_two_sample_test(
     n1, p = X.shape
     n2, p2 = Y.shape
     if p2 != p:
-        raise ValueError("X and Y must have the same number of features (columns).")
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
     if n1 < 2 or n2 < 2:
         raise ValueError("Need n1 >= 2 and n2 >= 2.")
 
@@ -1276,7 +1292,13 @@ def cai_liu_xia_2013_two_sample_test(
 
 
 def chang_2017_perturbation_max_test(
-    X, Y, alpha=0.05, B=1000, use_upper_triangle=True, eps=1e-12, random_state=None,
+    X,
+    Y,
+    alpha=0.05,
+    B=1000,
+    use_upper_triangle=True,
+    eps=1e-12,
+    random_state=None,
 ):
     """
     Chang et al. (Biometrics 2017) perturbation (multiplier bootstrap) max test
@@ -1306,7 +1328,9 @@ def chang_2017_perturbation_max_test(
     n, p = X.shape
     m, p2 = Y.shape
     if p2 != p:
-        raise ValueError("X and Y must have the same number of features (columns).")
+        raise ValueError(
+            "X and Y must have the same number of features (columns)."
+        )
     if n < 2 or m < 2:
         raise ValueError("Need at least 2 samples per group.")
 

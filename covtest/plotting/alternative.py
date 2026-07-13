@@ -289,7 +289,9 @@ def plot_power_curves_multi_alpha(pvals, params, alphas=[0.1, 0.05, 0.01]):
     for alpha in alphas:
         power = (pvals < alpha).mean(axis=0)
         ax.plot(params, power, "o-", linewidth=2, label=f"α={alpha}")
-    ax.axhline(0.8, color="gray", linestyle="--", linewidth=2, label="80% power")
+    ax.axhline(
+        0.8, color="gray", linestyle="--", linewidth=2, label="80% power"
+    )
     ax.set_xlabel("Parameter", fontsize=12)
     ax.set_ylabel("Power", fontsize=12)
     ax.legend(fontsize=11)

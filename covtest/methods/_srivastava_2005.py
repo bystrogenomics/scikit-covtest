@@ -8,7 +8,7 @@ def a_1_hat(S):
 
 def a_2_hat(S, n):
     p = S.shape[0]
-    frac1 = n ** 2 / ((n - 1) * (n + 2) * p)
+    frac1 = n**2 / ((n - 1) * (n + 2) * p)
     term1 = np.trace(np.dot(S, S))
     term2 = 1 / n * np.trace(S) ** 2
     a_2 = frac1 * (term1 - term2)
@@ -18,7 +18,7 @@ def a_2_hat(S, n):
 def gamma_1_hat(S, n):
     a_2 = a_2_hat(S, n)
     a_1 = a_1_hat(S)
-    gamma_1 = a_2 / a_1 ** 2
+    gamma_1 = a_2 / a_1**2
     return gamma_1
 
 

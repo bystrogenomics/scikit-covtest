@@ -31,7 +31,7 @@ def analyze_pvalues(p_values, num_permutations=1000, seed=42):
 
         - 'ks' : dict
             Kolmogorov-Smirnov test results with keys:
-            
+
             - 'stat' : float
                 KS test statistic.
             - 'pval' : float
@@ -39,13 +39,13 @@ def analyze_pvalues(p_values, num_permutations=1000, seed=42):
 
         - 'ad' : dict
             Anderson-Darling test results with keys:
-            
+
             - 'stat' : float
                 AD test statistic for uniform distribution.
 
         - 'ecdf_deviation' : dict
             ECDF deviation metrics with keys:
-            
+
             - 'linf' : float
                 L-infinity (maximum absolute) deviation.
             - 'l2' : float
@@ -62,7 +62,7 @@ def analyze_pvalues(p_values, num_permutations=1000, seed=42):
         - 'tail_tests' : dict
             Tail enrichment tests for thresholds [0.05, 0.01, 0.001].
             Each threshold maps to a dict with:
-            
+
             - 'count' : int
                 Observed number of p-values below threshold.
             - 'expected' : float
@@ -72,7 +72,7 @@ def analyze_pvalues(p_values, num_permutations=1000, seed=42):
 
         - 'qq_fit' : dict
             QQ-plot linear regression results with keys:
-            
+
             - 'intercept' : float
                 Intercept of -log10(p) QQ-plot regression.
             - 'slope' : float

@@ -40,5 +40,10 @@ include = ["covtest*"]
 "covtest.datasets" = ["data/*.npz"]
 
 [tool.ruff]
-line-length = 88
+line-length = 80
+
+[tool.ruff.lint]
 ignore = ["E501"]
+
+[tool.black]
+line-length = 80

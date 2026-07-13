@@ -76,7 +76,7 @@ def _ledoit_wolf_stat(data):
     sample_cov_matrix, trace_S, _ = covariance_traces(data)
     SmI = sample_cov_matrix - np.eye(p)
     trace_smi2 = np.trace(SmI @ SmI)
-    W = 1 / p * trace_smi2 - 1 / (n * p) * trace_S ** 2 + p / n
+    W = 1 / p * trace_smi2 - 1 / (n * p) * trace_S**2 + p / n
     return W
 
 
@@ -109,28 +109,30 @@ def _covariance_under_null(S, Sigma):
 
 def _fisher_2012_stat_(n, p, S_):
     c = p / n
-    ahat2 = (n ** 2 / ((n - 1) * (n + 2) * p)) * (
+    ahat2 = (n**2 / ((n - 1) * (n + 2) * p)) * (
         np.sum(np.diag(S_ @ S_)) - (np.sum(np.diag(S_)) ** 2) / n
     )
-    gamma = (n ** 5 * (n ** 2 + n + 2)) / (
+    gamma = (n**5 * (n**2 + n + 2)) / (
         (n + 1) * (n + 2) * (n + 4) * (n + 6) * (n - 1) * (n - 2) * (n - 3)
     )
     ahat4 = (gamma / p) * (
         np.sum(np.diag(S_ @ S_ @ S_ @ S_))
         - (4 / n) * np.sum(np.diag(S_ @ S_ @ S_)) * np.sum(np.diag(S_))
-        - ((2 * (n ** 2) + 3 * n - 6) / (n * (n ** 2 + n + 2)))
+        - ((2 * (n**2) + 3 * n - 6) / (n * (n**2 + n + 2)))
         * (np.sum(np.diag(S_ @ S_)) ** 2)
-        + ((2 * (5 * n + 6)) / (n * (n ** 2 + n + 2)))
+        + ((2 * (5 * n + 6)) / (n * (n**2 + n + 2)))
         * np.sum(np.diag(S_ @ S_))
         * (np.sum(np.diag(S_)) ** 2)
-        - ((5 * n + 6) / ((n ** 2) * (n ** 2 + n + 2))) * (np.sum(np.diag(S_)) ** 4)
+        - ((5 * n + 6) / ((n**2) * (n**2 + n + 2))) * (np.sum(np.diag(S_)) ** 4)
     )
-    return (n / np.sqrt(8 * (c ** 2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
+    return (n / np.sqrt(8 * (c**2 + 12 * c + 8))) * (ahat4 - 2 * ahat2 + 1)
 
 
 def _srivastava2011_(n, p, S_):
     term1 = (
-        (n ** 2 / ((n - 1) * (n + 2))) * (np.trace(S_ @ S_) - np.trace(S_) ** 2 / n) / p
+        (n**2 / ((n - 1) * (n + 2)))
+        * (np.trace(S_ @ S_) - np.trace(S_) ** 2 / n)
+        / p
     )
     term2 = 2 * (np.trace(S_) / p)
     return n * (term1 - term2 + 1) / 2
@@ -196,9 +198,11 @@ def test_identity_T2(
     # We subtract this finite-sample correction so that (n/2)*T2_corrected
     # is mean-zero under the null for any p/n ratio.
     if center:
-        T2 = T2 - p / (n ** 2)
+        T2 = T2 - p / (n**2)
 
-    z, used_cal = ahmad2015._standardize_T(T2, n=n, p=p, calibration=calibration)
+    z, used_cal = ahmad2015._standardize_T(
+        T2, n=n, p=p, calibration=calibration
+    )
 
     if tail == "upper":
         pval = float(norm.sf(z))
@@ -351,7 +355,7 @@ def tyler_identity(X, unknown_mean=False, method="tr"):
         T_tr = np.trace(C @ C)
         T_log = slogdet(C)[1]
         mean_tr = p * (1 + p / (n - 1))
-        var_tr = 4 * c ** 2
+        var_tr = 4 * c**2
         mean_log = -(p - (n - 1)) * np.log(1 - c) - p
         var_log = -2 * np.log(1 - c) - 2 * c
     else:
@@ -361,7 +365,9 @@ def tyler_identity(X, unknown_mean=False, method="tr"):
         T_log = slogdet(C)[1]
         mean_tr = p * (1 + c) - (c * (c - 3)) / (1 - c)
         var_tr = (2 * c) ** 2
-        mean_log = -p + (p - n) * np.log(1 - c) + 0.5 * np.log(1 - c) - c / (1 - c)
+        mean_log = (
+            -p + (p - n) * np.log(1 - c) + 0.5 * np.log(1 - c) - c / (1 - c)
+        )
         var_log = -2 * np.log(1 - c) - 2 * c
 
     z_tr = (T_tr - mean_tr) / np.sqrt(var_tr)
@@ -502,7 +508,9 @@ def one_sample_cov_test(X, mean=None, S=None):
     lrt = np.sum(np.diag(S_matrix)) - np.log(la.det(S_matrix)) - p
     mu1 = -0.5 * np.log(1 - y)
     sigma1 = -2 * np.log(1 - y) - 2 * y
-    z_value = (lrt - p * (1 + (1 - yN) / yN * np.log(1 - yN)) - mu1) / np.sqrt(sigma1)
+    z_value = (lrt - p * (1 + (1 - yN) / yN * np.log(1 - yN)) - mu1) / np.sqrt(
+        sigma1
+    )
     p_value = norm.sf(z_value)
 
     return {"p_value": p_value, "z_value": z_value, "lrt": lrt}

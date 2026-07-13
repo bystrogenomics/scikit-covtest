@@ -271,12 +271,16 @@ def mardia_tests(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     x = np.asarray(data, dtype=float)
     n, p = x.shape
     if p < 2:
-        raise ValueError("Need at least two numeric variables for Mardia's test.")
+        raise ValueError(
+            "Need at least two numeric variables for Mardia's test."
+        )
     if np.isnan(x).any():
         mask = ~np.isnan(x).any(axis=1)
         x = x[mask]
         n = x.shape[0]
-        print(f"Warning: {np.sum(~mask)} rows with missing values were removed.")
+        print(
+            f"Warning: {np.sum(~mask)} rows with missing values were removed."
+        )
 
     # --- Center and covariance ---
     x_centered = x - np.mean(x, axis=0)
@@ -292,7 +296,7 @@ def mardia_tests(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     D = x_centered @ invS @ x_centered.T
 
     # --- Mardia’s measures (observed) ---
-    g1p_obs = np.sum(D ** 3) / n ** 2
+    g1p_obs = np.sum(D**3) / n**2
     g2p_obs = np.sum(np.diag(D) ** 2) / n
 
     # --- Skewness test ---
@@ -328,10 +332,10 @@ def mardia_tests(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
                 Db = xb_c @ invSb @ xb_c.T
                 Djb = np.diag(Db)
 
-                g1p_b = np.sum(Db ** 3) / n ** 2
+                g1p_b = np.sum(Db**3) / n**2
                 skew_b = n * k_const * g1p_b / 6 if n < 20 else n * g1p_b / 6
 
-                g2p_b = np.sum(Djb ** 2) / n
+                g2p_b = np.sum(Djb**2) / n
                 kurt_b = (g2p_b - p * (p + 2)) * sq_factor
 
                 skew_boot.append(skew_b)
@@ -405,7 +409,9 @@ def shapiro_francia_w(x):
     """
     n = len(x)
     if n < 3:
-        raise ValueError("Sample size must be at least 3 for Shapiro–Francia W.")
+        raise ValueError(
+            "Sample size must be at least 3 for Shapiro–Francia W."
+        )
 
     x = np.asarray(x)
     x_sorted = np.sort(x)
@@ -485,7 +491,9 @@ def royston_test(data):
     x = np.asarray(data, dtype=float)
     n, p = x.shape
     if p < 2:
-        raise ValueError("Need at least two numeric variables for Royston's test.")
+        raise ValueError(
+            "Need at least two numeric variables for Royston's test."
+        )
     if n <= 3 or n > 2000:
         raise ValueError("Sample size must be >3 and <=2000.")
 
@@ -494,14 +502,14 @@ def royston_test(data):
     if 4 <= n <= 11:
         # Small sample constants
         g = -2.273 + 0.459 * n
-        m = 0.544 - 0.39978 * n + 0.025054 * n ** 2 - 0.0006714 * n ** 3
-        s = np.exp(1.3822 - 0.77857 * n + 0.062767 * n ** 2 - 0.0020322 * n ** 3)
+        m = 0.544 - 0.39978 * n + 0.025054 * n**2 - 0.0006714 * n**3
+        s = np.exp(1.3822 - 0.77857 * n + 0.062767 * n**2 - 0.0020322 * n**3)
         small_sample = True
     else:
         # Large sample constants
         lx = np.log(n)
-        m = -1.5861 - 0.31082 * lx - 0.083751 * lx ** 2 + 0.0038915 * lx ** 3
-        s = np.exp(-0.4803 - 0.082676 * lx + 0.0030302 * lx ** 2)
+        m = -1.5861 - 0.31082 * lx - 0.083751 * lx**2 + 0.0038915 * lx**3
+        s = np.exp(-0.4803 - 0.082676 * lx + 0.0030302 * lx**2)
         small_sample = False
 
     # Compute z_i for each variable
@@ -518,9 +526,9 @@ def royston_test(data):
     v = 0.21364 + 0.015124 * (np.log(n) ** 2) - 0.0018034 * (np.log(n) ** 3)
     ll = 5
     C = np.corrcoef(x, rowvar=False)
-    NC = (C ** ll) * (1 - (u * (1 - C) ** u) / v)
+    NC = (C**ll) * (1 - (u * (1 - C) ** u) / v)
     T = np.sum(NC) - p
-    mC = T / (p ** 2 - p)
+    mC = T / (p**2 - p)
     edf = p / (1 + (p - 1) * mC)
 
     # Observed H statistic
@@ -641,10 +649,14 @@ def hz_test(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     x = np.asarray(data, dtype=float)
     n, p = x.shape
     if p < 2:
-        raise ValueError("Need at least two numeric variables for Henze–Zirkler test.")
+        raise ValueError(
+            "Need at least two numeric variables for Henze–Zirkler test."
+        )
     if np.isnan(x).any():
         mask = ~np.isnan(x).any(axis=1)
-        print(f"Warning: {np.sum(~mask)} rows with missing values were removed.")
+        print(
+            f"Warning: {np.sum(~mask)} rows with missing values were removed."
+        )
         x = x[mask]
         n = x.shape[0]
 
@@ -667,32 +679,32 @@ def hz_test(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
     b = (n ** (1 / (p + 4))) * (((2 * p + 1) / 4) ** (1 / (p + 4))) / np.sqrt(2)
 
     # --- HZ statistic ---
-    part1 = np.sum(np.exp(-(b ** 2) / 2 * Djk)) / (n ** 2)
+    part1 = np.sum(np.exp(-(b**2) / 2 * Djk)) / (n**2)
     part2 = (
         2
-        * (1 + b ** 2) ** (-p / 2)
-        * np.sum(np.exp(-(b ** 2) / (2 * (1 + b ** 2)) * Dj))
+        * (1 + b**2) ** (-p / 2)
+        * np.sum(np.exp(-(b**2) / (2 * (1 + b**2)) * Dj))
         / n
     )
-    hz_stat = n * (part1 - part2 + (1 + 2 * b ** 2) ** (-p / 2))
+    hz_stat = n * (part1 - part2 + (1 + 2 * b**2) ** (-p / 2))
 
     # --- Log-normal approximation parameters ---
-    a = 1 + 2 * b ** 2
-    wb = (1 + b ** 2) * (1 + 3 * b ** 2)
+    a = 1 + 2 * b**2
+    wb = (1 + b**2) * (1 + 3 * b**2)
     mu = 1 - a ** (-p / 2) * (
-        1 + (p * b ** 2) / a + (p * (p + 2) * b ** 4) / (2 * a ** 2)
+        1 + (p * b**2) / a + (p * (p + 2) * b**4) / (2 * a**2)
     )
     si2 = (
-        2 * (1 + 4 * b ** 2) ** (-p / 2)
+        2 * (1 + 4 * b**2) ** (-p / 2)
         + 2
         * a ** (-p)
-        * (1 + (2 * p * b ** 4) / a ** 2 + (3 * p * (p + 2) * b ** 8) / (4 * a ** 4))
+        * (1 + (2 * p * b**4) / a**2 + (3 * p * (p + 2) * b**8) / (4 * a**4))
         - 4
         * wb ** (-p / 2)
-        * (1 + (3 * p * b ** 4) / (2 * wb) + (p * (p + 2) * b ** 8) / (2 * wb ** 2))
+        * (1 + (3 * p * b**4) / (2 * wb) + (p * (p + 2) * b**8) / (2 * wb**2))
     )
-    pmu = np.log(np.sqrt(mu ** 4 / (si2 + mu ** 2)))
-    psi = np.sqrt(np.log((si2 + mu ** 2) / mu ** 2))
+    pmu = np.log(np.sqrt(mu**4 / (si2 + mu**2)))
+    psi = np.sqrt(np.log((si2 + mu**2) / mu**2))
 
     # --- Asymptotic p-value ---
     p_value = lognorm.sf(hz_stat, s=psi, scale=np.exp(pmu))
@@ -716,14 +728,14 @@ def hz_test(data, use_population=True, tol=1e-25, bootstrap=False, B=1000):
                 Djkb = np.add.outer(Djb, Djb) - 2 * Db
 
                 bb = b  # same smoothing param
-                part1b = np.sum(np.exp(-(bb ** 2) / 2 * Djkb)) / (n ** 2)
+                part1b = np.sum(np.exp(-(bb**2) / 2 * Djkb)) / (n**2)
                 part2b = (
                     2
-                    * (1 + bb ** 2) ** (-p / 2)
-                    * np.sum(np.exp(-(bb ** 2) / (2 * (1 + bb ** 2)) * Djb))
+                    * (1 + bb**2) ** (-p / 2)
+                    * np.sum(np.exp(-(bb**2) / (2 * (1 + bb**2)) * Djb))
                     / n
                 )
-                hz_b = n * (part1b - part2b + (1 + 2 * bb ** 2) ** (-p / 2))
+                hz_b = n * (part1b - part2b + (1 + 2 * bb**2) ** (-p / 2))
                 boot_stats.append(hz_b)
             except np.linalg.LinAlgError:
                 continue
@@ -806,7 +818,9 @@ def condition_and_rank(X, center=True, ddof=1, eps=1e-12):
 
     warnings = []
     if n < p:
-        warnings.append("n < p: high-dimensional regime; some tests may be unstable.")
+        warnings.append(
+            "n < p: high-dimensional regime; some tests may be unstable."
+        )
     if np.isinf(cond) or cond > 1e8:
         warnings.append("Ill-conditioned covariance (condition number > 1e8).")
     if e_rank < 0.5 * p:

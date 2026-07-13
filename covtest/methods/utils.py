@@ -236,7 +236,9 @@ def check_array(
     else:
         desired_dtype = np.dtype(dtype)
 
-    array = _asarray_with_order(array, dtype=desired_dtype, order=order, copy=copy)
+    array = _asarray_with_order(
+        array, dtype=desired_dtype, order=order, copy=copy
+    )
 
     # Reject object dtype if numeric is requested but conversion failed
     if dtype == "numeric" and array.dtype.kind == "O":
@@ -248,7 +250,8 @@ def check_array(
     # Dimensionality checks
     if array.ndim == 0:
         raise InputValidationError(
-            f"{est_name} expected array-like input for {input_name}, " "got scalar."
+            f"{est_name} expected array-like input for {input_name}, "
+            "got scalar."
         )
 
     if array.ndim == 1:
@@ -312,7 +315,11 @@ def validate_data_matrix(X):
         Validated 2D array.
     """
     return check_array(
-        X, ensure_2d=True, allow_nd=False, force_all_finite=True, dtype="numeric",
+        X,
+        ensure_2d=True,
+        allow_nd=False,
+        force_all_finite=True,
+        dtype="numeric",
     )
 
 

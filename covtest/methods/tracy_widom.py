@@ -39,7 +39,9 @@ def derivative(func, x, dx=1e-6, order=3, *args, **kwargs):
         points = x + dx * np.array([-3, -2, -1, 0, 1, 2, 3])
         return np.dot(weights, [func(pt, *args, **kwargs) for pt in points])
     elif order == 9:
-        weights = np.array([3, -32, 168, -672, 0, 672, -168, 32, -3]) / (840 * dx)
+        weights = np.array([3, -32, 168, -672, 0, 672, -168, 32, -3]) / (
+            840 * dx
+        )
         points = x + dx * np.array([-4, -3, -2, -1, 0, 1, 2, 3, 4])
         return np.dot(weights, [func(pt, *args, **kwargs) for pt in points])
     else:
@@ -59,34 +61,44 @@ _digits_4 = ddict["d4"]
 _tau0 = 0.872371414954127
 
 _para_n = [
-    [_tau0 ** 0.5 / 2.0 ** 0.25, 1.0 / 24.0, 2.0 ** (-0.5) / 3.0, 1.0 / 16.0],
+    [_tau0**0.5 / 2.0**0.25, 1.0 / 24.0, 2.0 ** (-0.5) / 3.0, 1.0 / 16.0],
     [_tau0, 1.0 / 12.0, 0, 1.0 / 8.0],
-    [_tau0 ** 0.5 / 2.0 ** (38.0 / 48.0), 1.0 / 6.0, -(2.0 ** 0.5) / 3.0, 1.0 / 16.0,],
+    [
+        _tau0**0.5 / 2.0 ** (38.0 / 48.0),
+        1.0 / 6.0,
+        -(2.0**0.5) / 3.0,
+        1.0 / 16.0,
+    ],
 ]
 
 _para_p = [
-    [0.25 / (np.pi ** 0.5), 0, 2.0 / 3.0, 0.75],
+    [0.25 / (np.pi**0.5), 0, 2.0 / 3.0, 0.75],
     [1.0 / (16.0 * np.pi), 0, 4.0 / 3.0, 1.5],
     [1.0 / (512.0 * np.pi), 0, 8.0 / 3.0, 3.0],
 ]
 
 
 def _f(x, N, a, b, c, u=0, v=0):
-    s = x ** 1.5
-    return N * np.exp(-s * (s * a + b)) / x ** c * (1.0 + (u + v / s) / s)
+    s = x**1.5
+    return N * np.exp(-s * (s * a + b)) / x**c * (1.0 + (u + v / s) / s)
 
 
 def _dlnf_dx(x, a, b, c, u=0, v=0):
-    s = x ** 1.5
+    s = x**1.5
     return (
-        -(3.0 * a * s * s + 1.5 * b * s + c + 1.5 * (s * u + v + v) / ((s + u) * s + v))
+        -(
+            3.0 * a * s * s
+            + 1.5 * b * s
+            + c
+            + 1.5 * (s * u + v + v) / ((s + u) * s + v)
+        )
         / x
     )
 
 
 def _find_u_v(x, f, dlnf, N, a, b, c):
     # log f = log N - a x^3 - b x^1.5 - c log x + log1p ( (u+v/s)/s )
-    s = x ** 1.5
+    s = x**1.5
     xd2 = x * 2.0 * (dlnf - _dlnf_dx(x, a, b, c))
 
     def vv(uu):
@@ -173,7 +185,9 @@ class TracyWidom(object):
         dlnf = derivative(
             lambda xx: np.log(self.__cdf(-xx)), -x[1], dx=3.33e-3, order=7
         )
-        self.__para_n = _para_n[ib] + list(_find_u_v(-x[1], y[1], dlnf, *_para_n[ib]))
+        self.__para_n = _para_n[ib] + list(
+            _find_u_v(-x[1], y[1], dlnf, *_para_n[ib])
+        )
         self.__asym_n = lambda xx: _f(-xx, *self.__para_n)
         self.__asym_inv_n = lambda yy: -(_finv(yy, *self.__para_n))
 
