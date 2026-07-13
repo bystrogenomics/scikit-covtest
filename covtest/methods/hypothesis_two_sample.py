@@ -194,6 +194,20 @@ def boxm_test(X, Y, type="chi.squared"):
     return result_dict(test_statistic, p_value)
 
 
+def _product_f_cdf(x, nu1, nu2, n_mc=200_000, seed=0):
+    """CDF of sqrt(F1 * F2) where F1, F2 are iid F(nu1, nu2).
+
+    Used for the correct null distribution in ishii_two_sample (Theorem 5.1
+    of Ishii 2017).
+    """
+    rng = np.random.default_rng(seed)
+    samples = np.sqrt(
+        f.rvs(nu1, nu2, size=n_mc, random_state=rng)
+        * f.rvs(nu1, nu2, size=n_mc, random_state=rng)
+    )
+    return float(np.mean(samples <= x))
+
+
 def ishii_two_sample(X, Y, test="full"):
     """Ishii (2015) NR-PCA test for equality of two covariance matrices.
 
@@ -241,7 +255,7 @@ def ishii_two_sample(X, Y, test="full"):
     kappa2 = np.trace(X2_centered.T @ X2_centered / nu2) - lambda2
     gamma_hat = max(kappa1 / kappa2, kappa2 / kappa1)
     h_dot = np.abs(h1[:, 0] @ h2[:, 0])
-    h_star = (h_dot + 1 / h_dot) / 2
+    h_star = max(h_dot, 1.0 / h_dot)  # paper: h* = max{h, 1/h}
 
     F1 = lambda1 / lambda2
     F2 = F1 * (h_star if lambda1 >= lambda2 else 1 / h_star)
@@ -249,7 +263,8 @@ def ishii_two_sample(X, Y, test="full"):
 
     if test == "full":
         stat = F3
-        p_value = 2 * min(f.cdf(F3, nu1, nu2), 1 - f.cdf(F3, nu1, nu2))
+        cdf_val = _product_f_cdf(F3, nu1, nu2)
+        p_value = 2 * min(cdf_val, 1 - cdf_val)
     elif test == "leading":
         stat = F1
         p_value = 2 * min(f.cdf(F1, nu1, nu2), 1 - f.cdf(F1, nu1, nu2))
@@ -397,9 +412,9 @@ def _srivastava_yanagihara_stat(x):
 
     a4 = (1.0 / c0) * (
         np.trace(Apool @ Apool @ Apool @ Apool) / p
-        - c1 * a1
-        - c2 * p * a1**2 * a2
-        - c3 * a2**2
+        - c1 * p * a1  # FIXED: added × p
+        - c2 * p**2 * a1**2 * a2  # FIXED: p → p**2
+        - c3 * p * a2**2  # FIXED: added × p
         - ntot * p**3 * a1**4
     )
 
@@ -522,9 +537,9 @@ def _srivastava_2007_stat(x):
 
     a4 = (1.0 / c0) * (
         np.trace(Apool @ Apool @ Apool @ Apool) / p
-        - c1 * a1
-        - c2 * a1**2 * a2
-        - c3 * a2**2
+        - c1 * p * a1  # FIXED: added × p
+        - c2 * p**2 * a1**2 * a2  # FIXED: added × p**2
+        - c3 * p * a2**2  # FIXED: added × p
         - ntot * a1**4 * p**3
     )
 
@@ -992,7 +1007,9 @@ def schott2007(X: np.ndarray, Y: np.ndarray) -> Dict[str, Any]:
     Sxx = Sx * n1 / (n1 - 1)
     Syy = Sy * n2 / (n2 - 1)
 
-    SsS = (Sxx * n1 + Syy * n2) / (n1 + n2)
+    SsS = (Sxx * (n1 - 1) + Syy * (n2 - 1)) / (
+        n1 + n2 - 2
+    )  # FIXED: df-weighted
 
     eta1 = ((n1 - 1) + 2) * ((n1 - 1) - 1)
     eta2 = ((n2 - 1) + 2) * ((n2 - 1) - 1)
