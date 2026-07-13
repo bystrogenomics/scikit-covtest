@@ -139,4 +139,3 @@ Random Matrix Theory (RMT) distribution statistics
    mu2
    sigma2_2
    d2_hat
-

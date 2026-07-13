@@ -40,4 +40,3 @@ False discovery rate (FDR)
    blaroq
    weighted_bh
    storey_qvalues
-

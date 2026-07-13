@@ -31,22 +31,22 @@ Covariance matrices are central to statistics, machine learning, neuroscience, f
 
 ### Covariance hypothesis tests
 
-- **Identity tests**  
+- **Identity tests**
   Test whether a covariance matrix equals the identity matrix:
 
   $$H_0: \Sigma = I$$
 
-- **Sphericity tests**  
+- **Sphericity tests**
   Test whether a covariance matrix is proportional to the identity matrix:
 
   $$H_0: \Sigma = cI$$
 
-- **Two-sample equality tests**  
+- **Two-sample equality tests**
   Test whether two populations share the same covariance matrix:
 
   $$H_0: \Sigma_1 = \Sigma_2$$
 
-- **Proportionality tests**  
+- **Proportionality tests**
   Test whether two covariance matrices differ only by scale:
 
   $$H_0: \Sigma_1 = c\Sigma_2$$
@@ -365,19 +365,19 @@ Covariance testing is regime-dependent. A method that is valid and powerful in o
 
 Before choosing a test, consider:
 
-1. **Dimensionality**  
+1. **Dimensionality**
    Is \(p < n\), \(p \approx n\), or \(p > n\)?
 
-2. **Alternative structure**  
+2. **Alternative structure**
    Do you expect sparse, dense, low-rank, or global covariance changes?
 
-3. **Distributional assumptions**  
+3. **Distributional assumptions**
    Are the observations approximately Gaussian, elliptical, heavy-tailed, or strongly non-normal?
 
-4. **Conditioning**  
+4. **Conditioning**
    Is the covariance matrix well-conditioned, rank-deficient, or nearly singular?
 
-5. **Multiplicity**  
+5. **Multiplicity**
    Are you running one test or thousands of tests?
 
 When running many tests, use the multiplicity module to control FWER or FDR.
