@@ -51,10 +51,8 @@ Sphericity tests
    bartlett_sphericity_test
    john_sphericity
    srivastava_2005_sphericity
-   sk_test
    muirhead_sphericity_lrt
    czz_sphericity_test
-   hallin_rank_sphericity_test
 
 
 Proportionality tests
@@ -69,7 +67,6 @@ Proportionality tests
    :toctree: generated/
    :template: function.rst
 
-   flury_proportionality_test
    bartlett_adjusted_proportionality_test
    proportionality_test_LZ
    proportionality_test_signs
