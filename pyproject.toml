@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scikit-covtest"
-version = "0.0.1"
+version = "0.0.2"
 description = "Covariance Hypothesis Testing and Evaluation"
 authors = [
     { name = "Austin Talbot", email = "austin.talbot1993@gmail.com" }
