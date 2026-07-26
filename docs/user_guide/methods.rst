@@ -53,9 +53,7 @@ Sphericity tests evaluate the null hypothesis :math:`H_0: \Sigma = \sigma^2 I_p`
 - **Chen-Zhang-Zhong (2010) test** (``czz_sphericity_test``): A location-invariant high-dimensional U-statistic sphericity test.
 - **Ahmad (2015) sphericity test** (``ahmad2015_sphericity_test``): A high-dimensional trace ratio test.
 - **Bartlett's sphericity test** (``bartlett_sphericity_test``): A classic likelihood ratio test (requires $p < n$).
-- **Kendall's tau-type SK test** (``sk_test``): A distribution-free high-dimensional test based on U-statistics.
 - **Hu-Li-Liu-Zhou (2019) tests** (``hu_2019_sphericity_test``): Spatial-sign-based sphericity tests for elliptical populations.
-- **Hallin rank-based test** (``hallin_rank_sphericity_test``): Rank-based sphericity test.
 - **Muirhead's Likelihood Ratio Test** (``muirhead_sphericity_lrt``): LRT for sphericity with small-sample Bartlett correction.
 
 **Example Usage**:
@@ -112,7 +110,6 @@ Proportionality Tests
 
 Proportionality tests evaluate the null hypothesis :math:`H_0: \Sigma_1 = c \Sigma_2` for some scalar :math:`c > 0`. They are implemented in :mod:`covtest.methods.hypothesis_proportionality`:
 
-- **Flury's test** (``flury_proportionality_test``): Classic likelihood ratio test using MLE (requires $p < n$).
 - **Bartlett-adjusted test** (``bartlett_adjusted_proportionality_test``): Bartlett-corrected Wilks LRT utilizing parametric bootstrap.
 - **Liu-Xu-Zheng-Tian (2014) test** (``proportionality_test_LZ``): High-dimensional proportionality test (requires $p < n_2$).
 - **Cheng robust test** (``proportionality_test_signs``): Robust high-dimensional test based on spatial sign covariance. Highly suitable for $p > n$ and heavy-tailed data.

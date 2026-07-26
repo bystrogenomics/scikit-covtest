@@ -148,7 +148,7 @@ class TracyWidom(object):
 
     def __init__(self, beta=2):
         """
-        Construnct a TracyWidom class for a given beta.
+        Construct a TracyWidom class for a given beta.
 
         Parameters
         ----------

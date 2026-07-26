@@ -1,20 +1,19 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "scikit-covtest"
-version = "0.1.0"
+version = "0.0.1"
 description = "Covariance Hypothesis Testing and Evaluation"
 authors = [
     { name = "Austin Talbot", email = "austin.talbot1993@gmail.com" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 dependencies = [
-    "numba",
     "numpy",
     "pandas",
     "scikit-learn",
@@ -24,8 +23,14 @@ dependencies = [
     "matplotlib",
     "cvxpy",
     "statsmodels",
-    "pytest",
 ]
+
+[project.optional-dependencies]
+test     = ["pytest", "pytest-cov"]
+docs     = ["Sphinx", "sphinx-rtd-theme", "docutils"]
+lint     = ["ruff==0.4.4", "black==24.4.2"]
+datasets = ["pooch>=1.8"]
+dev      = ["pytest", "pytest-cov", "ruff==0.4.4", "black==24.4.2", "pooch>=1.8"]
 
 [project.urls]
 Homepage = "https://github.com/bystrogenomics/scikit-covtest"
@@ -37,12 +42,13 @@ include-package-data = true
 include = ["covtest*"]
 
 [tool.setuptools.package-data]
-"covtest.datasets" = ["data/*.npz"]
+# iris is small (7 KB) — keep bundled.
+# mnist and tcga are fetched on first use via pooch (see covtest/datasets/loader.py).
+"covtest.datasets" = ["data/iris_dataset.npz"]
+"covtest.methods" = ["*.p"]
 
 [tool.ruff]
 line-length = 80
-
-[tool.ruff.lint]
 ignore = ["E501"]
 
 [tool.black]

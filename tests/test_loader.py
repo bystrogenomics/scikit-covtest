@@ -1,8 +1,25 @@
 # tests/test_loader.py
+#
+# Test strategy for remote datasets (mnist, tcga):
+#
+#   * While the repo still contains the large .npz files (developer checkout),
+#     _load_npz() finds them via the bundled-path branch and ALL tests run
+#     without pooch installed.
+#
+#   * Once the files are removed from the repo (post PyPI release), the tests
+#     that exercise mnist/tcga are skipped when pooch is absent, and download
+#     + cache the files when pooch IS present (e.g. `pip install -e ".[dev]"`).
+#
+# This means CI passes in both configurations.
+
 import numpy as np
 import pytest
 
 from covtest.datasets.loader import load_iris, load_mnist, load_tcga
+
+# ---------------------------------------------------------------------------
+# Iris – always bundled, no pooch needed
+# ---------------------------------------------------------------------------
 
 
 def test_load_iris_X_y_shape():
@@ -41,6 +58,26 @@ def test_load_iris_dict_mode():
     assert len(data["target_names"]) == 3
 
 
+# ---------------------------------------------------------------------------
+# MNIST – bundled locally; fetched via pooch otherwise.
+# ---------------------------------------------------------------------------
+
+# Check whether the file is present on disk (developer checkout)
+_MNIST_BUNDLED = (
+    __import__("pathlib").Path(__file__).parent.parent
+    / "covtest/datasets/data/mnist.npz"
+).exists()
+
+# Mark: skip if file is absent AND pooch is not installed
+_mnist_available = pytest.mark.skipif(
+    not _MNIST_BUNDLED
+    and __import__("importlib").util.find_spec("pooch") is None,
+    reason="mnist.npz not bundled and pooch not installed; "
+    "install via `pip install scikit-covtest[datasets]`",
+)
+
+
+@_mnist_available
 def test_load_mnist_train_shape():
     X, y = load_mnist(split="train", return_X_y=True, normalize=True)
     assert isinstance(X, np.ndarray)
@@ -51,15 +88,16 @@ def test_load_mnist_train_shape():
     assert np.all(X >= 0.0) and np.all(X <= 1.0)
 
 
+@_mnist_available
 def test_load_mnist_test_shape():
     X, y = load_mnist(split="test", return_X_y=True, normalize=False)
     assert X.shape == (10000, 784)
     assert y.shape == (10000,)
-    # Pixel values should be in [0, 255] before normalization
     assert X.max() <= 255
     assert X.min() >= 0
 
 
+@_mnist_available
 def test_load_mnist_dict_mode():
     data = load_mnist(return_X_y=False, normalize=False)
     assert set(data.keys()) == {"X_train", "y_train", "X_test", "y_test"}
@@ -69,29 +107,60 @@ def test_load_mnist_dict_mode():
     assert data["y_test"].shape == (10000,)
 
 
+@_mnist_available
 def test_invalid_split_raises():
     with pytest.raises(ValueError):
         load_mnist(split="validation")
 
 
-# -----------------------------
-# New tests for load_tcga
-# -----------------------------
+def test_load_mnist_no_pooch_raises_helpful_error(monkeypatch, tmp_path):
+    """When the file is absent and pooch is not installed, get a clear error."""
+    import importlib
+    import sys
+
+    import covtest.datasets.loader as loader_mod
+
+    # Pretend the bundled file doesn't exist
+    monkeypatch.setattr(
+        loader_mod, "_DATA_DIR", tmp_path  # empty dir → file not found
+    )
+    # Hide pooch from the import system
+    monkeypatch.setitem(sys.modules, "pooch", None)
+    # Invalidate the find_spec cache
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
+
+    with pytest.raises(ImportError, match="pooch"):
+        load_mnist()
+
+
+# ---------------------------------------------------------------------------
+# TCGA – bundled locally; fetched via pooch otherwise.
+# ---------------------------------------------------------------------------
+
+_TCGA_BUNDLED = (
+    __import__("pathlib").Path(__file__).parent.parent
+    / "covtest/datasets/data/tcga.npz"
+).exists()
+
+_tcga_available = pytest.mark.skipif(
+    not _TCGA_BUNDLED
+    and __import__("importlib").util.find_spec("pooch") is None,
+    reason="tcga.npz not bundled and pooch not installed; "
+    "install via `pip install scikit-covtest[datasets]`",
+)
+
+
+@_tcga_available
 def test_load_tcga_basic():
-    try:
-        X, y = load_tcga()
-    except ModuleNotFoundError:
-        pytest.skip("TCGA data requires newer numpy")
+    X, y = load_tcga()
     assert isinstance(X, np.ndarray)
     assert isinstance(y, np.ndarray)
-    assert X.shape[0] == y.shape[0]  # should now match 801 samples
+    assert X.shape[0] == y.shape[0]
 
 
+@_tcga_available
 def test_load_tcga_with_names():
-    try:
-        X, y, feat_names, label_names, sample_ids = load_tcga(return_names=True)
-    except ModuleNotFoundError:
-        pytest.skip("TCGA data requires newer numpy")
+    X, y, feat_names, label_names, sample_ids = load_tcga(return_names=True)
     assert isinstance(X, np.ndarray)
     assert isinstance(y, np.ndarray)
     assert isinstance(feat_names, np.ndarray)
@@ -101,11 +170,9 @@ def test_load_tcga_with_names():
     assert y.shape[0] == sample_ids.shape[0]
 
 
+@_tcga_available
 def test_load_tcga_dict_mode():
-    try:
-        data = load_tcga(return_X_y=False)
-    except ModuleNotFoundError:
-        pytest.skip("TCGA data requires newer numpy")
+    data = load_tcga(return_X_y=False)
     assert set(data.keys()) == {
         "X",
         "y",
