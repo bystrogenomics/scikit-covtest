@@ -26,8 +26,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-cov"]
-docs = ["Sphinx", "sphinx-rtd-theme", "docutils"]
+test     = ["pytest", "pytest-cov"]
+docs     = ["Sphinx", "sphinx-rtd-theme", "docutils"]
+lint     = ["ruff==0.4.4", "black==24.4.2"]
+datasets = ["pooch>=1.8"]
+dev      = ["pytest", "pytest-cov", "ruff==0.4.4", "black==24.4.2", "pooch>=1.8"]
 
 [project.urls]
 Homepage = "https://github.com/bystrogenomics/scikit-covtest"
@@ -39,7 +42,9 @@ include-package-data = true
 include = ["covtest*"]
 
 [tool.setuptools.package-data]
-"covtest.datasets" = ["data/*.npz"]
+# iris is small (7 KB) — keep bundled.
+# mnist and tcga are fetched on first use via pooch (see covtest/datasets/loader.py).
+"covtest.datasets" = ["data/iris_dataset.npz"]
 "covtest.methods" = ["*.p"]
 
 [tool.ruff]
