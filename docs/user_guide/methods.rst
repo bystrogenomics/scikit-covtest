@@ -113,7 +113,6 @@ Proportionality tests evaluate the null hypothesis :math:`H_0: \Sigma_1 = c \Sig
 - **Bartlett-adjusted test** (``bartlett_adjusted_proportionality_test``): Bartlett-corrected Wilks LRT utilizing parametric bootstrap.
 - **Liu-Xu-Zheng-Tian (2014) test** (``proportionality_test_LZ``): High-dimensional proportionality test (requires $p < n_2$).
 - **Cheng robust test** (``proportionality_test_signs``): Robust high-dimensional test based on spatial sign covariance. Highly suitable for $p > n$ and heavy-tailed data.
-- **Pseudo-Likelihood Ratio Test (PLRT)** (``proportionality_plrt``): Pseudo-LRT utilizing random matrix theory limits.
 - **Tsukuda trace-based test** (``proportional_cov_test_tsukuda``): Trace-based test for high-dimensional settings.
 - **Ahmad (2022) test** (``ahmad_2022_proportionality_test``): High-dimensional trace-based test using $U$-statistics.
 

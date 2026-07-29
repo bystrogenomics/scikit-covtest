@@ -3,8 +3,6 @@ from typing import Dict, Literal, Optional
 import numpy as np
 import numpy.linalg as la
 import scipy.stats as stats
-from numpy.linalg import inv, slogdet
-from scipy.integrate import quad
 
 from . import _cheng_2019 as cheng2019
 from . import _eriksen_1987 as eriksen1987
@@ -273,123 +271,6 @@ def proportionality_test_signs(
     return {
         "p_value": float(p_right),
         "stat": float(Z) if np.isfinite(Z) else np.nan,
-    }
-
-
-def proportionality_plrt(X, Y, dist_moments="gaussian"):
-    """
-    Pseudo-Likelihood Ratio Test (PLRT) for proportionality of two covariance matrices.
-
-    Parameters
-    ----------
-    X : ndarray, shape (n1, p)
-        Sample 1 (rows are observations).
-    Y : ndarray, shape (n2, p)
-        Sample 2 (rows are observations).
-    dist_moments : str, default="gaussian"
-        Distributional assumption to set 4th moment adjustments.
-        - "gaussian": sets beta_x = beta_y = 0.
-
-    Returns
-    -------
-    result : dict
-        Dictionary containing:
-        - T1 : PLRT statistic
-        - Z : standardized test statistic ~ N(0,1) under H0
-        - pvalue_one_sided
-        - pvalue_two_sided
-        - mu_T1, sigma2_T1
-    """
-    n1, p = X.shape
-    n2, p2 = Y.shape
-    assert p == p2, "Both groups must have same dimension"
-
-    # Sample covariances (unbiased)
-    S1 = np.cov(X, rowvar=False, bias=False)
-    S2 = np.cov(Y, rowvar=False, bias=False)
-
-    # Ratios
-    y1 = p / n1
-    y2 = p / n2
-    h = np.sqrt(y1 + y2 - y1 * y2)
-
-    # kurtosis parameters
-    if dist_moments == "gaussian":
-        beta_x, beta_y = 0.0, 0.0
-    else:
-        raise NotImplementedError("Only Gaussian case implemented.")
-
-    # T1 statistic
-    X = validate_data_matrix(X)
-    Y = validate_data_matrix(Y)
-    A = S1 @ inv(S2)
-    tr_term = np.trace(A) / p
-    sign, logdet = slogdet(A)
-    if sign <= 0:
-        raise ValueError("Matrix product S1*S2^{-1} not positive definite.")
-    T1 = p * np.log(tr_term) - logdet
-
-    # Compute LSD bounds
-    a = (1 - h) ** 2 / (1 - y2) ** 2
-    b = (1 + h) ** 2 / (1 - y2) ** 2
-
-    def f_density(x, y1, y2):
-        if x < a or x > b:
-            return 0.0
-        return (
-            (1 - y2)
-            * np.sqrt((b - x) * (x - a))
-            / (2 * np.pi * x * (y1 + y2 * x))
-        )
-
-    # compute a0 and a1 integrals
-    def integrand_a0(x):
-        return x * f_density(x, y1, y2)
-
-    def integrand_a1(x):
-        return np.log(x) * f_density(x, y1, y2)
-
-    a0, _ = quad(integrand_a0, a, b, limit=200)
-    a1, _ = quad(integrand_a1, a, b, limit=200)
-
-    # mu_CLT vector
-    mu_CLT = np.array(
-        [
-            y2 / (1 - y2) ** 2 + (y2 * beta_y) / (1 - y2),
-            0.5 * np.log((1 - h**2) / (1 - y2) ** 2)
-            - 0.5 * beta_x * y1
-            + 0.5 * beta_y * y2,
-        ]
-    )
-
-    # Sigma_CLT matrix
-    Sigma_CLT = np.array(
-        [
-            [
-                2 * h**2 / (1 - y2) ** 4
-                + (beta_x * y1 + beta_y * y2) / (1 - y2) ** 2,
-                (beta_x * y1 + beta_y * y2) / (1 - y2)
-                + 2 * h**2 / (1 - y2) ** 2,
-            ],
-            [
-                (beta_x * y1 + beta_y * y2) / (1 - y2)
-                + 2 * h**2 / (1 - y2) ** 2,
-                -2 * np.log(1 - h**2) + beta_x * y1 + beta_y * y2,
-            ],
-        ]
-    )
-
-    v = np.array([1 / a0, -1])
-    mu_T1 = v @ mu_CLT
-    sigma2_T1 = v @ Sigma_CLT @ v
-
-    # Standardize
-    Z = (T1 - mu_T1 - p * (np.log(a0) - a1)) / np.sqrt(sigma2_T1)
-    p_one = 1 - stats.norm.cdf(Z)
-
-    return {
-        "stat": float(Z),
-        "p_value": float(p_one),
     }
 
 

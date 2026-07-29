@@ -72,7 +72,8 @@ from .utils import (
 
 def _ledoit_wolf_stat(data):
     """Compute the Ledoit–Wolf test statistic W."""
-    n, p = data.shape
+    N, p = data.shape
+    n = N - 1  # degrees of freedom (Ledoit & Wolf 2002, Assumption 2)
     sample_cov_matrix, trace_S, _ = covariance_traces(data)
     SmI = sample_cov_matrix - np.eye(p)
     trace_smi2 = np.trace(SmI @ SmI)
@@ -244,7 +245,8 @@ def ledoit_wolf_identity(X):
     Ledoit, O., & Wolf, M. (2002). Annals of Statistics 30(4), 1081-1102.
     """
     X = validate_data_matrix(X)
-    n, p = X.shape
+    N, p = X.shape
+    n = N - 1  # degrees of freedom
     W = _ledoit_wolf_stat(X)
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * W
@@ -276,7 +278,8 @@ def nagao_identity(X):
     Nagao, H. (1973). Annals of Statistics 1(4), 700-709.
     """
     X = validate_data_matrix(X)
-    n, p = X.shape
+    N, p = X.shape
+    n = N - 1  # degrees of freedom
     V = _nagao_stat(X)
     degree_of_freedom = p * (p + 1) / 2
     stat = n * p / 2 * V
