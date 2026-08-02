@@ -70,7 +70,6 @@ Proportionality tests
    bartlett_adjusted_proportionality_test
    proportionality_test_LZ
    proportionality_test_signs
-   proportionality_plrt
    proportional_cov_test_tsukuda
    ahmad_2022_proportionality_test
 

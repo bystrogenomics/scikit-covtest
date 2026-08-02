@@ -5,7 +5,6 @@ from covtest.methods.hypothesis_proportionality import (
     ahmad_2022_proportionality_test,
     bootstrap_bartlett_adjusted_proportionality_test,
     proportional_cov_test_tsukuda,
-    proportionality_plrt,
     proportionality_test_LZ,
     proportionality_test_signs,
 )
@@ -27,7 +26,6 @@ def assert_result_dict_2samp(res):
         bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
-        proportionality_plrt,
     ],
 )
 def test_proportionality_methods_smoke(method):
@@ -47,7 +45,6 @@ def test_proportionality_methods_smoke(method):
         bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
-        proportionality_plrt,
     ],
 )
 def test_proportionality_methods_null_finite(method):
@@ -69,7 +66,6 @@ def test_proportionality_methods_null_finite(method):
         bootstrap_bartlett_adjusted_proportionality_test,
         proportionality_test_signs,
         proportional_cov_test_tsukuda,
-        proportionality_plrt,
     ],
 )
 def test_proportionality_methods_alternative_power(method):

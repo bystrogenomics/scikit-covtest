@@ -19,7 +19,6 @@ from covtest.methods.hypothesis_spherical import (
     czz_sphericity_test,
 )
 from covtest.methods.hypothesis_proportionality import (
-    flury_proportionality_test,
     proportionality_test_LZ,
     proportional_cov_test_tsukuda,
 )
@@ -358,6 +357,6 @@ for col_idx, (col_label, methods) in enumerate(all_columns):
         ax_pwr.set_ylabel("")
     style_axis(ax_pwr)
 
-fig.savefig("figures/figure_simulations_nicer.pdf")
-fig.savefig("figures/figure_simulations_nicer.png")
-print("Saved figures/figure_simulations_nicer.pdf and figures/figure_simulations_nicer.png successfully!")
+fig.savefig("figures/figure_simulations_nicer2.pdf")
+fig.savefig("figures/figure_simulations_nicer2.png")
+print("Saved figures/figure_simulations_nicer2.pdf and figures/figure_simulations_nicer2.png successfully!")
