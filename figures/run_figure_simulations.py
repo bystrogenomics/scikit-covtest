@@ -1,8 +1,16 @@
 import os
+import sys
+from pathlib import Path
+
 import numpy as np
+
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/scikit-covtest-matplotlib")
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Allow ``python figures/<script>.py`` from a source checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from covtest.simulation.generate_covariances import (
     generate_spiked_covariance,
@@ -357,6 +365,6 @@ for col_idx, (col_label, methods) in enumerate(all_columns):
         ax_pwr.set_ylabel("")
     style_axis(ax_pwr)
 
-fig.savefig("figures/figure_simulations_nicer2.pdf")
-fig.savefig("figures/figure_simulations_nicer2.png")
-print("Saved figures/figure_simulations_nicer2.pdf and figures/figure_simulations_nicer2.png successfully!")
+fig.savefig("figures/figure_simulations.pdf")
+fig.savefig("figures/figure_simulations.png")
+print("Saved figures/figure_simulations.pdf and figures/figure_simulations.png successfully!")
