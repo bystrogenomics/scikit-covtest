@@ -528,6 +528,13 @@ def _srivastava_2007_stat(x):
         * (pooledcov2trace - (1.0 / ntot) * pooledcovtrace**2)
     )
 
+    if not np.isfinite(a2) or a2 <= 0:
+        raise ValueError(
+            "Srivastava (2007) is undefined when the pooled covariance "
+            "has zero trace-square estimate. Remove or separately handle "
+            "constant feature blocks."
+        )
+
     a1 = pooledcovtrace / p
 
     c0 = ntot**4 + 6 * ntot**3 + 21 * ntot**2 + 18 * ntot
