@@ -81,6 +81,23 @@ def test_srivastava_2007(data_three_groups):
     assert 0 <= res["p_value"] <= 1
 
 
+def test_srivastava_2007_accepts_fancy_indexed_arrays(data_two_groups):
+    X, Y = data_two_groups
+    # ``rng.choice``/advanced indexing, as used by the MNIST figure script,
+    # can produce an array that requires a copy under NumPy 2.
+    X_indexed = X[np.array([0, 2, 4, 6, 8, 10, 12, 14, 16, 18])]
+    Y_indexed = Y[np.array([0, 2, 4, 6, 8, 10, 12, 14, 16, 18])]
+    result = srivastava_two_sample_2007(X_indexed, Y_indexed)
+    assert 0 <= result["p_value"] <= 1
+
+
+def test_srivastava_2007_rejects_degenerate_covariance_blocks():
+    X = np.ones((20, 5))
+    Y = np.ones((25, 5))
+    with pytest.raises(ValueError, match="constant feature blocks"):
+        srivastava_two_sample_2007(X, Y)
+
+
 def test_wald_two_sample(data_two_groups):
     X1, X2 = data_two_groups
     res = wald_two_sample(X1, X2)

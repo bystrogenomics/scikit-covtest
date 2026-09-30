@@ -23,8 +23,14 @@ def _asarray_with_order(x, dtype=None, order=None, copy=False):
     if order not in (None, "C", "F"):
         raise ValueError("order must be one of None, 'C', or 'F'.")
 
-    arr = np.array(x, dtype=dtype, order=order, copy=copy)
-    return arr
+    if copy:
+        return np.array(x, dtype=dtype, order=order, copy=True)
+
+    # NumPy 2 raises when ``np.array(..., copy=False)`` cannot honor the
+    # no-copy request, as happens for non-contiguous arrays from fancy
+    # indexing. ``asarray`` retains the prior behavior: avoid a copy when
+    # possible, otherwise make the required conversion.
+    return np.asarray(x, dtype=dtype, order=order)
 
 
 def _is_arraylike(x):

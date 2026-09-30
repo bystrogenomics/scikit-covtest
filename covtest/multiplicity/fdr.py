@@ -60,6 +60,23 @@ __all__ = [
 ]
 
 
+def _validate_pvalues(pvalues):
+    """Return a one-dimensional, finite vector of valid p-values.
+
+    Multiple-testing adjustments are defined only for a fixed family of valid
+    p-values.  In particular, silently sorting a NaN can contaminate the
+    reverse cumulative-minimum calculation used by step-up procedures.
+    """
+    p = np.asarray(pvalues, dtype=float)
+    if p.ndim != 1 or p.size == 0:
+        raise ValueError("pvalues must be a non-empty one-dimensional array.")
+    if not np.all(np.isfinite(p)):
+        raise ValueError("pvalues must contain only finite values.")
+    if np.any((p < 0.0) | (p > 1.0)):
+        raise ValueError("pvalues must lie in the interval [0, 1].")
+    return p
+
+
 def SUD(pvalues, critical_values, start_idx_sud):
     """
     Step-Up/Step-Down (SUD) procedure for multiple testing.
@@ -109,7 +126,7 @@ def SUD(pvalues, critical_values, start_idx_sud):
 
     This is a helper function used by SD() and SU() procedures.
     """
-    pvalues = np.asarray(pvalues, dtype=float)
+    pvalues = _validate_pvalues(pvalues)
     critical_values = np.asarray(critical_values, dtype=float)
     m = len(critical_values)
 
@@ -273,7 +290,7 @@ def benjamini_hochberg(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
            testing. Journal of the Royal Statistical Society: Series B
            (Methodological), 57(1), 289-300.
     """
-    p = np.asarray(pvals, dtype=float)
+    p = _validate_pvalues(pvals)
     m = p.size
     order = np.argsort(p)
     p_sorted = p[order]
@@ -371,7 +388,7 @@ def benjamini_liu(pvalues, alpha=0.05, verbose=False):
     >>> np.sum(results['rejected']) == np.sum(bh_results['rejected'])
     True
     """
-    pvalues = np.asarray(pvalues, dtype=float)
+    pvalues = _validate_pvalues(pvalues)
     m = len(pvalues)
 
     # Critical values
@@ -498,7 +515,7 @@ def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> Dict:
     >>> np.sum(results_higher['rejected'])
     3
     """
-    p = np.asarray(pvals, dtype=float)
+    p = _validate_pvalues(pvals)
     m = p.size
     c_m = np.sum(1.0 / np.arange(1, m + 1))
     order = np.argsort(p)
@@ -612,7 +629,7 @@ def blaroq(pvalues, alpha=0.05, pii=None, verbose=False):
     >>> results_custom['rejected']
     array([ True,  True, False, False])
     """
-    pvalues = np.asarray(pvalues, dtype=float)
+    pvalues = _validate_pvalues(pvalues)
     k = len(pvalues)
 
     # Default prior if not provided
@@ -764,7 +781,7 @@ def weighted_bh(
     -.     print("Caught expected error:", str(e))
     Caught expected error: weights must be nonnegative and same length as pvals
     """
-    p = np.asarray(pvals, dtype=float)
+    p = _validate_pvalues(pvals)
     w = np.asarray(weights, dtype=float)
     m = p.size
 
@@ -909,7 +926,7 @@ def storey_qvalues(
     >>> print(f"All null pi_0: {results_null['pi0']:.3f}")
     All null pi_0: 0.983
     """
-    p = np.asarray(pvals, dtype=float)
+    p = _validate_pvalues(pvals)
     m = p.size
     if lambdas is None:
         lambdas = np.linspace(0.05, 0.95, 19)

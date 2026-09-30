@@ -89,6 +89,21 @@ pip install -e ".[dev]"
 pytest
 ```
 
+## Reproducing paper figures
+
+The scripts in `figures/` reproduce the paper figures. Install the dataset
+extra before running the MNIST or TCGA examples:
+
+```bash
+pip install -e ".[datasets]"
+python figures/run_figure_simulations.py
+python figures/run_mnist_example.py
+python figures/run_tcga_example.py
+```
+
+See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for fixed simulation parameters,
+generated files, data exclusions, and the corresponding manuscript revisions.
+
 ---
 
 ## Quickstart

@@ -22,7 +22,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from covtest.datasets import load_mnist
 from covtest.methods.hypothesis_two_sample import (
-    schott2007,
     srivastava_two_sample_2007,
     srivastava_yanagihara_two_sample,
 )
@@ -30,9 +29,24 @@ from covtest.methods.hypothesis_two_sample import (
 
 METHODS = [
     ("Srivastava (2007)", srivastava_two_sample_2007),
-    ("Schott (2007)", schott2007),
     ("Srivastava-Yanagihara (2014)", srivastava_yanagihara_two_sample),
 ]
+
+COLORS = ["#5B8DB8", "#78B7A5", "#9C8AC7"]
+NULL_COLOR = "#9C8AC7"
+ALT_COLOR = "#E39B63"
+
+
+def style_axis(ax):
+    """Apply the publication style shared by the paper figures."""
+    ax.grid(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_linewidth(1.5)
+    ax.spines["left"].set_linewidth(1.5)
+    ax.tick_params(
+        axis="both", direction="out", length=4.5, width=1.1, labelsize=14
+    )
 
 
 def parse_args():
@@ -72,18 +86,68 @@ def main():
         X0, X1, args.n, args.n_rep, np.random.default_rng(args.seed)
     )
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5), constrained_layout=True)
-    axes[0].hist(X0.ravel(), bins=100, density=True, alpha=0.6, label="MNIST: 0")
-    axes[0].hist(X1.ravel(), bins=100, density=True, alpha=0.6, label="MNIST: 1")
-    axes[0].set(xlabel="Standardized input", ylabel="Density", title="Data distributions")
-    axes[0].legend()
+    fig, axes = plt.subplots(1, 3, figsize=(17, 5.2), constrained_layout=True)
+    fig.set_constrained_layout_pads(wspace=0.05)
+    axes[0].hist(
+        X0.ravel(), bins=100, density=True, alpha=0.70, color=COLORS[0],
+        label="Digit 0",
+    )
+    axes[0].hist(
+        X1.ravel(), bins=100, density=True, alpha=0.60, color=ALT_COLOR,
+        label="Digit 1",
+    )
+    axes[0].set_xlim(-3, 5)
+    axes[0].set(
+        xlabel="Standardized pixel intensity", ylabel="Density",
+        title="MNIST input distributions",
+    )
+    axes[0].set_xlabel("Standardized pixel intensity", fontsize=18)
+    axes[0].set_ylabel("Density", fontsize=18)
+    axes[0].set_title("MNIST input distributions", fontsize=20, pad=12)
+    axes[0].legend(frameon=False, fontsize=11)
+    style_axis(axes[0])
+
     for j, (label, _) in enumerate(METHODS):
-        axes[1].hist(null[:, j], bins=30, density=True, histtype="step", label=label)
-        axes[2].hist(-np.log10(np.maximum(alternative[:, j], np.finfo(float).tiny)), bins=30, density=True, histtype="step", label=label)
-    axes[1].set(xlabel="P-value", ylabel="Density", title="Null p-values", xlim=(0, 1))
-    axes[2].set(xlabel="-log10(P-value)", ylabel="Density", title="Alternative p-values")
-    axes[1].legend(fontsize=8)
-    axes[2].legend(fontsize=8)
+        observed = np.sort(null[:, j])
+        expected = np.arange(1, len(observed) + 1) / len(observed)
+        axes[1].plot(expected, observed, color=COLORS[j], linewidth=2.4, label=label)
+    axes[1].plot([0, 1], [0, 1], color="#6F6F6F", linestyle=(0, (4, 3)), linewidth=1.3)
+    axes[1].set(
+        xlabel="Expected p-value", ylabel="Observed p-value",
+        title="Null calibration", xlim=(0, 1), ylim=(0, 1),
+    )
+    axes[1].set_xlabel("Expected p-value", fontsize=18)
+    axes[1].set_ylabel("Observed p-value", fontsize=18)
+    axes[1].set_title("Null calibration", fontsize=20, pad=12)
+    axes[1].set_aspect("equal", adjustable="box")
+    axes[1].legend(frameon=False, fontsize=10, loc="upper left")
+    style_axis(axes[1])
+
+    x = np.arange(len(METHODS))
+    width = 0.36
+    null_rate = np.mean(null < 0.05, axis=0)
+    power = np.mean(alternative < 0.05, axis=0)
+    axes[2].bar(x - width / 2, null_rate, width, color=NULL_COLOR, label="Null")
+    axes[2].bar(x + width / 2, power, width, color=ALT_COLOR, label="Digit 0 vs 1")
+    axes[2].axhline(0.05, color="#6F6F6F", linestyle=(0, (4, 3)), linewidth=1.3)
+    axes[2].text(
+        x[-1] + 0.37, 0.07, r"$\alpha = 0.05$", color="#5A5A5A",
+        ha="right", fontsize=11,
+    )
+    axes[2].set(
+        xticks=x, xticklabels=["Srivastava", "S.-Y."],
+        xlabel="Test", ylabel="Rejection rate", title="Null rejection and power",
+        ylim=(0, 1.05),
+    )
+    axes[2].set_xlabel("Test", fontsize=18)
+    axes[2].set_ylabel("Rejection rate", fontsize=18)
+    axes[2].set_title("Null rejection and power", fontsize=20, pad=12)
+    axes[2].legend(frameon=False, fontsize=11, loc="upper left")
+    style_axis(axes[2])
+    for value, position in zip(null_rate, x - width / 2):
+        axes[2].text(position, min(value + 0.03, 1.02), f"{value:.2f}", ha="center", fontsize=9)
+    for value, position in zip(power, x + width / 2):
+        axes[2].text(position, min(value + 0.03, 1.02), f"{value:.2f}", ha="center", fontsize=9)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output_dir / "figure_mnist.pdf")
     fig.savefig(args.output_dir / "figure_mnist.png", dpi=300)
