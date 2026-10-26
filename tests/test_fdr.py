@@ -49,6 +49,13 @@ def test_by_more_conservative():
     assert np.allclose(res2["qvals"], true_q2)
 
 
+def test_bh_and_by_reject_nonfinite_pvalues():
+    pvals = np.array([0.001, 0.002, 0.5, np.nan])
+    for method in (fdr.benjamini_hochberg, fdr.benjamini_yekutieli):
+        with np.testing.assert_raises_regex(ValueError, "finite"):
+            method(pvals)
+
+
 def test_blaroq():
     pvals = np.array([0.001, 0.01, 0.2, 0.5])
     res = fdr.blaroq(pvals, alpha=0.05)
