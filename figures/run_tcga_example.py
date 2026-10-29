@@ -1,117 +1,160 @@
-"""Reproduce the TCGA multiple-testing panels from the paper.
+"""Test BRCA-versus-LUAD correlation structure in prespecified Reactome pathways.
 
-Degenerate five-gene blocks are excluded before multiplicity correction and
-recorded in the output.  This is necessary because the Srivastava (2007)
-statistic is undefined for a block whose pooled covariance is identically zero.
+The expression values remain in their distributed order.  The accompanying
+PanCan identifier map restores that order's source identifiers and Reactome
+supplies the biological pathway membership.
 """
-
 import argparse
+import csv
+import hashlib
 import sys
 from pathlib import Path
-
-import os
-
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/scikit-covtest-matplotlib")
 
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-# Allow ``python figures/<script>.py`` from a source checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from covtest.datasets import load_tcga
 from covtest.methods.hypothesis_two_sample import srivastava_two_sample_2007
 from covtest.multiplicity.fdr import benjamini_hochberg, benjamini_yekutieli
 from covtest.multiplicity.fwer import bonferroni
 
-
-COLORS = {"pvalues": "#5B8DB8", "bh": "#78B7A5", "by": "#9C8AC7"}
-MAX_LOG_VALUE = 20
-
-
-def style_axis(ax):
-    """Apply the publication style shared by the paper figures."""
-    ax.grid(False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_linewidth(1.5)
-    ax.spines["left"].set_linewidth(1.5)
-    ax.tick_params(axis="both", direction="out", length=4.5, width=1.1)
+HERE = Path(__file__).resolve().parent
+GENE_IDS = HERE / "data/tcga_pancan_gene_ids.txt"
+PATHWAYS = HERE / "data/reactome_pathways_2026-06-21.gmt"
 
 
-def capped_negative_log10(values):
-    """Transform p-values while keeping underflow values visible but finite."""
-    return np.minimum(-np.log10(np.maximum(values, 10.0 ** -MAX_LOG_VALUE)), MAX_LOG_VALUE)
+def read_pathways(n_columns, minimum, maximum):
+    identifiers = GENE_IDS.read_text().splitlines()
+    if identifiers[0] != "sample" or len(identifiers) != n_columns + 1:
+        raise ValueError("TCGA identifier map does not match expression columns")
+    index = {}
+    for i, gene in enumerate(identifiers[1:]):
+        index.setdefault(gene, i)  # Do not test duplicated source identifiers twice.
+    pathways = []
+    for line in PATHWAYS.read_text().splitlines():
+        name, pathway_id, *genes = line.split("\t")
+        if not pathway_id.startswith("R-HSA-"):
+            continue
+        indices = list(dict.fromkeys(index[g] for g in genes if g in index))
+        if minimum <= len(indices) <= maximum:
+            pathways.append((name, pathway_id, np.asarray(indices)))
+    if not pathways:
+        raise ValueError("No eligible Reactome pathways")
+    return pathways
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--block-size", type=int, default=5)
-    parser.add_argument("--output-dir", type=Path, default=Path("figures"))
-    return parser.parse_args()
+def test_pathways(brca, luad, pathways):
+    rows = []
+    for name, pathway_id, indices in pathways:
+        try:
+            test = srivastava_two_sample_2007(brca[:, indices], luad[:, indices])
+        except ValueError:
+            continue
+        rows.append({"pathway_id": pathway_id, "pathway_name": name,
+                     "n_genes": len(indices), "stat": test["stat"],
+                     "p_value": test["p_value"]})
+    pvalues = np.array([row["p_value"] for row in rows])
+    bh, by, bonf = (benjamini_hochberg(pvalues),
+                    benjamini_yekutieli(pvalues), bonferroni(pvalues))
+    for row, bh_q, by_q, rejected in zip(rows, bh["qvals"], by["qvals"], bonf["rejected"]):
+        row.update(q_bh=bh_q, q_by=by_q, bonferroni_rejected=bool(rejected))
+    return rows
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def calibrate(pathways, n_brca, n_luad, repetitions, seed, output_dir):
+    """Calibrate the test under structured Gaussian covariance nulls.
+
+    Each distinct pathway dimension is evaluated, using a shared AR(1)
+    correlation matrix in both groups and the same within-group scaling as the
+    TCGA analysis.  This checks finite-sample calibration at the dimensions
+    actually used in the pathway analysis rather than at an arbitrary size.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    dimensions = sorted({len(indices) for _, _, indices in pathways})
+    records, all_pvalues = [], []
+    for dimension in dimensions:
+        covariance = 0.5 ** np.abs(np.subtract.outer(np.arange(dimension), np.arange(dimension)))
+        pvalues = []
+        for _ in range(repetitions):
+            brca = rng.multivariate_normal(np.zeros(dimension), covariance, n_brca)
+            luad = rng.multivariate_normal(np.zeros(dimension), covariance, n_luad)
+            brca = StandardScaler().fit_transform(brca)
+            luad = StandardScaler().fit_transform(luad)
+            pvalues.append(srivastava_two_sample_2007(brca, luad)["p_value"])
+        pvalues = np.asarray(pvalues)
+        all_pvalues.extend(pvalues)
+        records.append({"dimension": dimension, "n_repetitions": repetitions,
+                        "rejection_rate_alpha_0.05": (pvalues <= .05).mean()})
+    with (output_dir / "tcga_null_calibration.csv").open("w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=records[0].keys())
+        writer.writeheader()
+        writer.writerows(records)
+    pvalues = np.sort(np.asarray(all_pvalues))
+    expected = (np.arange(pvalues.size) + 1) / pvalues.size
+    fig, ax = plt.subplots(figsize=(6, 6), constrained_layout=True)
+    ax.plot(expected, pvalues, color="#5B8DB8", lw=1.5)
+    ax.plot([0, 1], [0, 1], color="0.4", ls="--")
+    ax.set(xlabel="Expected uniform p-value", ylabel="Observed p-value",
+           title="TCGA pathway-dimension null calibration", xlim=(0, 1), ylim=(0, 1))
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.savefig(output_dir / "figure_tcga_null_calibration.pdf")
+    fig.savefig(output_dir / "figure_tcga_null_calibration.png", dpi=300)
+
+
+def save(rows, output_dir, args):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with (output_dir / "tcga_pathway_results.csv").open("w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(sorted(rows, key=lambda row: row["p_value"]))
+    with (output_dir / "tcga_pathway_provenance.txt").open("w") as file:
+        file.write(f"gene_id_map_sha256={digest(GENE_IDS)}\n")
+        file.write(f"reactome_gmt_sha256={digest(PATHWAYS)}\n")
+        file.write(f"eligible_pathway_size={args.min_genes}-{args.max_genes}\n")
+    ordered = sorted(rows, key=lambda row: row["p_value"])
+    p = np.array([row["p_value"] for row in ordered])
+    q = np.array([row["q_by"] for row in ordered])
+    rank = np.arange(1, len(rows) + 1)
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5.2), constrained_layout=True)
+    axes[0].scatter(rank, -np.log10(np.maximum(p, 1e-20)), s=12, color="#5B8DB8")
+    axes[0].axhline(-np.log10(.05 / len(rows)), color="0.4", ls="--")
+    axes[0].set(xlabel="Reactome pathway rank", ylabel="-log10(p-value)", title="Pathway-level p-values")
+    axes[1].scatter(rank, -np.log10(np.maximum(q, 1e-20)), s=12, color="#9C8AC7")
+    axes[1].axhline(-np.log10(.05), color="0.4", ls="--")
+    axes[1].set(xlabel="Reactome pathway rank", ylabel="-log10(BY q-value)", title="Dependence-robust FDR")
+    for ax in axes:
+        ax.spines[["top", "right"]].set_visible(False)
+    fig.savefig(output_dir / "figure_tcga.pdf")
+    fig.savefig(output_dir / "figure_tcga.png", dpi=300)
 
 
 def main():
-    args = parse_args()
-    X_raw, y = load_tcga()
-    X = X_raw[:, 1:].astype(float)  # Drop sample identifier.
-    X_brca = StandardScaler().fit_transform(X[y == "BRCA"])
-    X_luad = StandardScaler().fit_transform(X[y == "LUAD"])
-    n_groups = X.shape[1] // args.block_size
-    pvalues = np.full(n_groups, np.nan)
-    excluded = []
-    for i in range(n_groups):
-        idx = args.block_size * i + np.arange(args.block_size)
-        try:
-            pvalues[i] = srivastava_two_sample_2007(X_brca[:, idx], X_luad[:, idx])["p_value"]
-        except ValueError as error:
-            excluded.append((i, str(error)))
-
-    valid = np.isfinite(pvalues)
-    tested_pvalues = pvalues[valid]
-    bh = benjamini_hochberg(tested_pvalues)
-    by = benjamini_yekutieli(tested_pvalues)
-    bonf = bonferroni(tested_pvalues)
-    q_bh = np.full(n_groups, np.nan)
-    q_by = np.full(n_groups, np.nan)
-    q_bh[valid], q_by[valid] = bh["qvals"], by["qvals"]
-
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5.2), constrained_layout=True)
-    fig.set_constrained_layout_pads(wspace=0.03)
-    groups = np.arange(n_groups)
-    p_log = capped_negative_log10(tested_pvalues)
-    q_bh_log = capped_negative_log10(q_bh[valid])
-    q_by_log = capped_negative_log10(q_by[valid])
-    bonf_threshold = -np.log10(0.05 / tested_pvalues.size)
-    bonf_rejected = tested_pvalues <= 0.05 / tested_pvalues.size
-    axes[0].scatter(groups[valid], p_log, s=10, color="#B7C2D0", alpha=0.72, linewidths=0)
-    axes[0].scatter(groups[valid][bonf_rejected], p_log[bonf_rejected], s=22, color=COLORS["pvalues"], label=f"Bonferroni rejections ({bonf_rejected.sum()})", zorder=3)
-    axes[0].axhline(bonf_threshold, color="#6F6F6F", linestyle=(0, (4, 3)), linewidth=1.4, label="Bonferroni threshold")
-    axes[0].set_xlabel("Covariate group", fontsize=18)
-    axes[0].set_ylabel("-log10(p-value)", fontsize=18)
-    axes[0].set_title("Block-level p-values", fontsize=24, pad=12)
-    axes[0].legend(frameon=False, fontsize=10, loc="upper right")
-    style_axis(axes[0])
-
-    axes[1].scatter(groups[valid], q_bh_log, s=11, color=COLORS["bh"], alpha=0.78, linewidths=0, label=f"BH ({bh['rejected'].sum()} rejections)")
-    axes[1].scatter(groups[valid], q_by_log, s=11, color=COLORS["by"], alpha=0.72, linewidths=0, label=f"BY ({by['rejected'].sum()} rejections)")
-    axes[1].axhline(-np.log10(0.05), color="#6F6F6F", linestyle=(0, (4, 3)), linewidth=1.4, label=r"$q = 0.05$")
-    axes[1].set_xlabel("Covariate group", fontsize=18)
-    axes[1].set_ylabel("-log10(adjusted p-value)", fontsize=18)
-    axes[1].set_title("FDR-adjusted p-values",fontsize=24)
-    axes[1].legend(frameon=False, fontsize=10, loc="upper left")
-    style_axis(axes[1])
-
-    for ax in axes:
-        ax.set_xlim(0, n_groups - 1)
-        ax.margins(x=0)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.output_dir / "figure_tcga.pdf")
-    fig.savefig(args.output_dir / "figure_tcga.png", dpi=300)
-    np.savez(args.output_dir / "tcga_example_results.npz", pvalues=pvalues, q_bh=q_bh, q_by=q_by, valid=valid)
-    print(f"Tested {tested_pvalues.size}/{n_groups} blocks; excluded {len(excluded)} degenerate blocks.")
-    print(f"Bonferroni={bonf['rejected'].sum()}, BH={bh['rejected'].sum()}, BY={by['rejected'].sum()}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--min-genes", type=int, default=15)
+    parser.add_argument("--max-genes", type=int, default=100)
+    parser.add_argument("--output-dir", type=Path, default=HERE)
+    parser.add_argument("--calibration-reps", type=int, default=0,
+                        help="null replicates for each distinct pathway dimension")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+    raw, labels = load_tcga()
+    X = raw[:, 1:].astype(float)
+    pathways = read_pathways(X.shape[1], args.min_genes, args.max_genes)
+    brca = StandardScaler().fit_transform(X[labels == "BRCA"])
+    luad = StandardScaler().fit_transform(X[labels == "LUAD"])
+    rows = test_pathways(brca, luad, pathways)
+    save(rows, args.output_dir, args)
+    if args.calibration_reps:
+        calibrate(pathways, brca.shape[0], luad.shape[0],
+                  args.calibration_reps, args.seed, args.output_dir)
+    print(f"Tested {len(rows)} prespecified Reactome pathways.")
 
 
 if __name__ == "__main__":
