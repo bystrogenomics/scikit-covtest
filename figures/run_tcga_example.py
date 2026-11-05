@@ -1,8 +1,10 @@
-"""Test BRCA-versus-LUAD correlation structure in prespecified Reactome pathways.
+"""Demonstrate pathway-level covariance testing for BRCA versus LUAD.
 
 The expression values remain in their distributed order.  The accompanying
 PanCan identifier map restores that order's source identifiers and Reactome
-supplies the biological pathway membership.
+supplies the biological pathway membership.  This is an exploratory worked
+example: its analytic p-values and multiplicity adjustments are descriptive
+summaries, not validated biological-discovery claims.
 """
 import argparse
 import csv
@@ -68,12 +70,13 @@ def digest(path):
 
 
 def calibrate(pathways, n_brca, n_luad, repetitions, seed, output_dir):
-    """Calibrate the test under structured Gaussian covariance nulls.
+    """Run a finite-sample diagnostic under a structured Gaussian covariance null.
 
     Each distinct pathway dimension is evaluated, using a shared AR(1)
     correlation matrix in both groups and the same within-group scaling as the
-    TCGA analysis.  This checks finite-sample calibration at the dimensions
-    actually used in the pathway analysis rather than at an arbitrary size.
+    TCGA analysis. This limited diagnostic examines the analytic reference at
+    the dimensions used in the pathway analysis; it does not validate
+    calibration for TCGA or FWER/FDR control.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
@@ -93,7 +96,9 @@ def calibrate(pathways, n_brca, n_luad, repetitions, seed, output_dir):
         records.append({"dimension": dimension, "n_repetitions": repetitions,
                         "rejection_rate_alpha_0.05": (pvalues <= .05).mean()})
     with (output_dir / "tcga_null_calibration.csv").open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=records[0].keys())
+        writer = csv.DictWriter(
+            file, fieldnames=records[0].keys(), lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(records)
     pvalues = np.sort(np.asarray(all_pvalues))
@@ -111,7 +116,9 @@ def calibrate(pathways, n_brca, n_luad, repetitions, seed, output_dir):
 def save(rows, output_dir, args):
     output_dir.mkdir(parents=True, exist_ok=True)
     with (output_dir / "tcga_pathway_results.csv").open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=rows[0].keys())
+        writer = csv.DictWriter(
+            file, fieldnames=rows[0].keys(), lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(sorted(rows, key=lambda row: row["p_value"]))
     with (output_dir / "tcga_pathway_provenance.txt").open("w") as file:
@@ -125,10 +132,12 @@ def save(rows, output_dir, args):
     fig, axes = plt.subplots(1, 2, figsize=(15, 5.2), constrained_layout=True)
     axes[0].scatter(rank, -np.log10(np.maximum(p, 1e-20)), s=12, color="#5B8DB8")
     axes[0].axhline(-np.log10(.05 / len(rows)), color="0.4", ls="--")
-    axes[0].set(xlabel="Reactome pathway rank", ylabel="-log10(p-value)", title="Pathway-level p-values")
+    axes[0].set(xlabel="Reactome pathway rank", ylabel="-log10(analytic p-value)",
+                title="Pathway-level analytic p-values")
     axes[1].scatter(rank, -np.log10(np.maximum(q, 1e-20)), s=12, color="#9C8AC7")
     axes[1].axhline(-np.log10(.05), color="0.4", ls="--")
-    axes[1].set(xlabel="Reactome pathway rank", ylabel="-log10(BY q-value)", title="Dependence-robust FDR")
+    axes[1].set(xlabel="Reactome pathway rank", ylabel="-log10(BY-adjusted value)",
+                title="BY-adjusted analytic p-values")
     for ax in axes:
         ax.spines[["top", "right"]].set_visible(False)
     fig.savefig(output_dir / "figure_tcga.pdf")
@@ -154,7 +163,7 @@ def main():
     if args.calibration_reps:
         calibrate(pathways, brca.shape[0], luad.shape[0],
                   args.calibration_reps, args.seed, args.output_dir)
-    print(f"Tested {len(rows)} prespecified Reactome pathways.")
+    print(f"Tested {len(rows)} eligible Reactome pathways (exploratory workflow).")
 
 
 if __name__ == "__main__":

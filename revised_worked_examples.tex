@@ -80,28 +80,32 @@ alternative, based on 300 replications with $N = 200$ observations per group.}
 \subsection{Multiple Hypothesis Testing with TCGA}
 \label{sec:tcga-example}
 
-In our second example, we demonstrate how \pkg{scikit-covtest} combines
-two-sample covariance-structure tests with multiple-testing procedures. We use
-the gene-expression cancer RNA-Seq dataset~\citep{fiorini2016gene}, a random
-extraction from the RNA-Seq (HiSeq) PANCAN dataset assembled by The Cancer
-Genome Atlas Pan-Cancer Analysis Project~\citep{weinstein2013cancer}. The
-dataset contains 801 samples and 20,531 gene-expression features. We compare
-breast invasive carcinoma (BRCA, $n = 300$) with lung adenocarcinoma (LUAD,
-$n = 141$).
+This worked example demonstrates a reproducible pathway-level workflow in
+\pkg{scikit-covtest}; it is not intended as a confirmatory biological analysis.
+We use the gene-expression cancer RNA-Seq dataset~\citep{fiorini2016gene}, a
+random extraction from the RNA-Seq (HiSeq) PANCAN dataset assembled by The
+Cancer Genome Atlas Pan-Cancer Analysis Project~\citep{weinstein2013cancer}.
+The dataset contains 801 samples and 20,531 gene-expression features. We
+compare breast invasive carcinoma (BRCA, $n = 300$) with lung adenocarcinoma
+(LUAD, $n = 141$).
 
-To target differences in correlation rather than marginal variances, we
-standardize every expression feature separately within BRCA and LUAD. We then
-partition the 20,531 features into 4,106 nonoverlapping blocks of five
-consecutive features, discarding the final trailing feature. The first column
-returned by \code{load_tcga()} is a sample identifier and is removed before
-the expression matrix is converted to numeric form.
+The first column returned by \code{load_tcga()} is a sample identifier and is
+removed before the expression matrix is converted to numeric form. The
+distributed matrix has placeholder feature labels, so the accompanying PanCan
+identifier map restores source gene identifiers in their original column
+order. We intersect those identifiers with the versioned human Reactome GMT
+file distributed with the repository. We retain Reactome pathways containing
+15--100 unique matched genes, yielding 1,152 eligible pathways.
 
-The Srivastava (2007) statistic is undefined for blocks whose pooled
-trace-square covariance estimate is zero. Of the 4,106 initial blocks, 30 are
-degenerate in this sense and are excluded before multiplicity correction. The
-remaining 4,076 valid block-level $p$-values form the family used for the
-Bonferroni, Benjamini--Hochberg (BH), and Benjamini--Yekutieli (BY)
-adjustments. The complete analysis and figure-generation code are provided in
+Within each tumour type, the script applies \code{StandardScaler} to every
+gene before testing: nonconstant genes are centered and scaled to unit
+variance, whereas a constant feature remains zero. Thus, the example
+illustrates comparisons of standardized within-pathway covariance structure
+rather than a raw-covariance analysis. For each eligible pathway, we apply the
+Srivastava (2007) two-sample
+statistic and report its analytic $p$-value together with nominal Bonferroni,
+Benjamini--Hochberg (BH), and Benjamini--Yekutieli (BY) adjusted summaries.
+The complete workflow and its input-file checksums are provided in
 \code{figures/run\_tcga\_example.py}.
 
 \begin{CodeChunk}
@@ -109,48 +113,61 @@ adjustments. The complete analysis and figure-generation code are provided in
 >>> import numpy as np
 >>> from sklearn.preprocessing import StandardScaler
 >>> from covtest.datasets import load_tcga
->>> from covtest.methods.hypothesis_two_sample import srivastava_two_sample_2007
->>> from covtest.multiplicity.fdr import benjamini_hochberg, benjamini_yekutieli
->>> from covtest.multiplicity.fwer import bonferroni
+>>> from figures.run_tcga_example import read_pathways, test_pathways
 >>> X_raw, y = load_tcga()
 >>> X = X_raw[:, 1:].astype(float)  # Drop the sample-ID column.
+>>> pathways = read_pathways(X.shape[1], minimum=15, maximum=100)
 >>> X_brca = StandardScaler().fit_transform(X[y == "BRCA"])
 >>> X_luad = StandardScaler().fit_transform(X[y == "LUAD"])
->>> n_groups = X.shape[1] // 5
->>> pvalues = np.full(n_groups, np.nan)
->>> for i in range(n_groups):
-...     idx = 5 * i + np.arange(5)
-...     try:
-...         pvalues[i] = srivastava_two_sample_2007(
-...             X_brca[:, idx], X_luad[:, idx]
-...         )["p_value"]
-...     except ValueError:
-...         pass  # Degenerate block; exclude before multiplicity correction.
->>> valid = np.isfinite(pvalues)
->>> tested_pvalues = pvalues[valid]
->>> bonf = bonferroni(tested_pvalues)
->>> res_bh = benjamini_hochberg(tested_pvalues)
->>> res_by = benjamini_yekutieli(tested_pvalues)
+>>> rows = test_pathways(X_brca, X_luad, pathways)
+>>> len(rows)
+1152
 \end{CodeInput}
 \end{CodeChunk}
 
-At $\alpha = 0.05$, Bonferroni rejects 23 of the 4,076 valid blocks. BH
-rejects 41 blocks, whereas the more conservative BY procedure rejects 26
-blocks. The ordering $23 \leq 26 \leq 41$ is expected: Bonferroni controls
-the family-wise error rate, whereas BH and BY control the false discovery
-rate, with BY additionally accounting for arbitrary dependence through its
-harmonic correction. Figure~\ref{fig:tcga} displays the block-level p-values
-and the BH and BY adjusted p-values. Values with $-\log_{10}$ adjusted
-$p$-values at or above 20 are displayed at 20 to avoid numerical underflow
-dominating the plot.
+For the current inputs, Reactome \emph{Surfactant metabolism}
+(R-HSA-5683826; 28 matched genes) has the smallest analytic $p$-value
+($4.74 \times 10^{-11}$; statistic $=43.28$), and is the only pathway below
+all three nominal adjusted thresholds (BH $q = 5.45 \times 10^{-8}$; BY
+$q = 4.16 \times 10^{-7}$). In this worked example, these values are used to
+illustrate pathway ranking and multiplicity-adjustment APIs. They are not
+presented as a validated scientific discovery or as evidence for an individual
+gene, a causal mechanism, or a therapeutic target.
+
+We assess the finite-sample behavior of the analytic reference distribution in
+a diagnostic null simulation. For each of the 85 pathway dimensions occurring
+in the analysis, 1,000 BRCA-sized and LUAD-sized Gaussian samples are generated
+from the same AR(1) correlation matrix with $\rho = 0.5$, standardized within
+group, and passed through the same test pipeline. At nominal $\alpha = 0.05$,
+the observed rejection proportions range from 0 to 0.001 rather than
+approximately 0.05. Thus, the analytic $p$-values are strongly conservative in
+this simulated setting.
+
+This diagnostic does not establish calibration for TCGA data, other covariance
+structures, or non-Gaussian expression distributions. Accordingly, the
+Bonferroni, BH, and BY values are reported as conventional nominal adjustment
+summaries, not as empirically validated 5\% FWER or FDR guarantees.
+Non-rejection should not be interpreted as evidence of equal standardized
+within-pathway covariance structure. The simulation and pathway results can be
+reproduced with
+\code{python figures/run\_tcga\_example.py --calibration-reps 1000 --seed 42}.
 
 \begin{figure}[t!]
 \centering
 \includegraphics[width=\textwidth]{figures/figure_tcga.pdf}
 \caption{\label{fig:tcga} TCGA results for the BRCA-versus-LUAD comparison.
-The left panel shows block-level $p$-values for the 4,076 valid five-feature
-blocks; the dashed line denotes the Bonferroni threshold at $\alpha = 0.05$,
-and highlighted points are Bonferroni rejections. The right panel shows BH and
-BY adjusted $p$-values. Thirty degenerate blocks were excluded before
-multiplicity correction.}
+The left panel ranks analytic $p$-values across 1,152 Reactome pathways; the
+dashed line denotes the nominal Bonferroni threshold at $\alpha = 0.05$. The
+right panel ranks BY-adjusted $q$-values; the dashed line denotes the nominal
+$q = 0.05$ threshold. This is an exploratory software demonstration rather
+than a confirmatory biological analysis.}
+\end{figure}
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.68\textwidth]{figures/figure_tcga_null_calibration.pdf}
+\caption{\label{fig:tcga-null-calibration} Null diagnostic for the TCGA
+pathway workflow. Ordered analytic $p$-values from Gaussian AR(1) simulations
+lie substantially above the uniform reference line, illustrating conservative
+finite-sample behavior in this specified simulation model.}
 \end{figure}
